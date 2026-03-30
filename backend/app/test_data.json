@@ -1,0 +1,163 @@
+[
+  {
+    "word": "Pipeline",
+    "definition": "A sequence of data processing steps",
+    "grammar_class": "noun",
+    "topic": "Data Engineering",
+    "example": "The ETL pipeline processes the data nightly."
+  },
+  {
+    "word": "Dataset",
+    "definition": "A structured collection of data",
+    "grammar_class": "noun",
+    "topic": "Data Science",
+    "example": "The dataset contains 10,000 rows."
+  },
+  {
+    "word": "Model",
+    "definition": "A representation of data used for predictions",
+    "grammar_class": "noun",
+    "topic": "Machine Learning",
+    "example": "We trained a linear regression model."
+  },
+  {
+    "word": "Performance",
+    "definition": "How well a system or model works",
+    "grammar_class": "noun",
+    "topic": "Evaluation",
+    "example": "Model performance improved after tuning."
+  },
+  {
+    "word": "Accuracy",
+    "definition": "The percentage of correct predictions",
+    "grammar_class": "noun",
+    "topic": "Evaluation",
+    "example": "The model reached 95% accuracy."
+  },
+  {
+    "word": "Latency",
+    "definition": "Time delay in a system",
+    "grammar_class": "noun",
+    "topic": "Systems",
+    "example": "The API has a latency of 200ms."
+  },
+  {
+    "word": "Scalable",
+    "definition": "Able to handle growing amounts of work",
+    "grammar_class": "adjective",
+    "topic": "System Design",
+    "example": "We built a scalable microservice architecture."
+  },
+  {
+    "word": "Optimize",
+    "definition": "Improve performance or efficiency",
+    "grammar_class": "verb",
+    "topic": "Software",
+    "example": "We optimized the query to run faster."
+  },
+  {
+    "word": "Algorithm",
+    "definition": "A step-by-step procedure for calculations or problem-solving",
+    "grammar_class": "noun",
+    "topic": "Computer Science",
+    "example": "We implemented a sorting algorithm to organize the data."
+  },
+  {
+    "word": "API",
+    "definition": "Application Programming Interface, a way for software to communicate",
+    "grammar_class": "noun",
+    "topic": "Software",
+    "example": "The frontend fetches data from the backend via an API."
+  },
+  {
+    "word": "Container",
+    "definition": "A lightweight, portable, self-sufficient environment for running applications",
+    "grammar_class": "noun",
+    "topic": "DevOps",
+    "example": "We deployed the app using Docker containers."
+  },
+  {
+    "word": "Framework",
+    "definition": "A platform or structure for developing software",
+    "grammar_class": "noun",
+    "topic": "Software",
+    "example": "We built the project using the Django framework."
+  },
+  {
+    "word": "Latency",
+    "definition": "Time delay experienced in a system",
+    "grammar_class": "noun",
+    "topic": "Networking",
+    "example": "The network latency was causing slow responses."
+  },
+  {
+    "word": "Microservice",
+    "definition": "A small, independent service that performs a specific task",
+    "grammar_class": "noun",
+    "topic": "System Design",
+    "example": "Each microservice can be deployed separately."
+  },
+  {
+    "word": "Refactor",
+    "definition": "To restructure code without changing its functionality",
+    "grammar_class": "verb",
+    "topic": "Software",
+    "example": "We need to refactor this module to improve readability."
+  },
+  {
+    "word": "Repository",
+    "definition": "A storage location for code and version control",
+    "grammar_class": "noun",
+    "topic": "Software",
+    "example": "The code is hosted on a GitHub repository."
+  },
+  {
+    "word": "Scalability",
+    "definition": "Ability of a system to handle growth efficiently",
+    "grammar_class": "noun",
+    "topic": "System Design",
+    "example": "The application needs scalability for millions of users."
+  },
+  {
+    "word": "Thread",
+    "definition": "The smallest sequence of programmed instructions that can be executed",
+    "grammar_class": "noun",
+    "topic": "Programming",
+    "example": "The program uses multiple threads to improve performance."
+  },
+  {
+    "word": "Throughput",
+    "definition": "The amount of data processed by a system in a given time",
+    "grammar_class": "noun",
+    "topic": "Systems",
+    "example": "The server’s throughput increased after the optimization."
+  },
+  {
+    "word": "Virtualization",
+    "definition": "Creating a virtual version of something, like hardware or OS",
+    "grammar_class": "noun",
+    "topic": "Cloud Computing",
+    "example": "We used virtualization to run multiple OS instances on one machine."
+  },
+  {
+    "word": "Query",
+    "definition": "A request for information from a database",
+    "grammar_class": "noun",
+    "topic": "Databases",
+    "example": "We wrote an SQL query to fetch user data."
+  },
+  {
+    "word": "Pipeline",
+    "definition": "A set of data processing steps chained together",
+    "grammar_class": "noun",
+    "topic": "Data Engineering",
+    "example": "The ETL pipeline transforms raw data into a clean dataset."
+  },
+  {
+    "word": "Index",
+    "definition": "A database structure that improves query performance",
+    "grammar_class": "noun",
+    "topic": "Databases",
+    "example": "We added an index to speed up searches on the users table."
+  }
+]
