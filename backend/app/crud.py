@@ -4,6 +4,7 @@ from app import models, schemas
 from pathlib import Path
 import json
 from fastapi import HTTPException
+from datetime import datetime
 
 
 # CREATE
@@ -102,18 +103,30 @@ def delete_all_words(db: Session):
     return deleted_count
 
 
-def reset_test_data(db: Session):
-    """
-    Delete all words and insert test data from test_data.json
-    """
-    db.query(models.Word).delete(synchronize_session=False)
-    db.commit()
+def reset_test_data(db):
+    import json
+    from pathlib import Path
+    from datetime import datetime
+    from . import models
 
-    json_path = Path(__file__).parent / "test_data.json"
-    with open(json_path, "r", encoding="utf-8") as f:
-        test_words = json.load(f)
+    # Path to JSON file
+    file_path = Path(__file__).parent / "test_data.json"
 
-    for w in test_words:
+    # Load JSON data
+    with open(file_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    # Clear old data
+    db.query(models.Word).delete()
+
+    # Add new data
+    for w in data:
+        # Convert created_at string to datetime
+        if isinstance(w.get("created_at"), str):
+            w["created_at"] = datetime.fromisoformat(
+                w["created_at"].replace("Z", "+00:00")
+            )
         db.add(models.Word(**w))
+
     db.commit()
-    return len(test_words)
+    return len(data)

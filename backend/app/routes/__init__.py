@@ -1,0 +1,1 @@
+from .words import router as words_router

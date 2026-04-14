@@ -1,5 +1,3 @@
-from pydantic import BaseModel
-from typing import Optional
 from pydantic import BaseModel, Field, validator
 from typing import Optional
 
@@ -31,7 +29,7 @@ class WordCreate(BaseModel):
 # Used in responses (includes id, author, status)
 class Word(WordBase):
     id: int
-    author_id: int
+    author: str
     status: str
 
     class Config:
