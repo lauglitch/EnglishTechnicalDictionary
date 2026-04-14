@@ -35,9 +35,17 @@ def create_word(db: Session, word: schemas.WordCreate, user_id: int):
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
 
-# READ ALL
-def get_words(db: Session, skip: int = 0, limit: int = 50):
-    return db.query(models.Word).offset(skip).limit(limit).all()
+# -------------------------
+# GET WORDS (TRUE A–Z ORDER FIX)
+# -------------------------
+def get_words(db: Session, skip: int = 0, limit: int = 10):
+    return (
+        db.query(models.Word)
+        .order_by(func.lower(models.Word.word).asc())  # ⭐ FIXED GLOBAL ORDER
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
 
 # READ ONE (case-insensitive)

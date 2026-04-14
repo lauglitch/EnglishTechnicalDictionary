@@ -63,7 +63,8 @@ function App() {
   const [page, setPage] = useState(0);
 
   const current = words.length > 0 ? words[index] : null;
-
+  current;
+  
   /* ---------------- BODY BACKGROUND FIX ---------------- */
   useEffect(() => {
     document.body.style.backgroundColor = darkMode ? "#111" : "#fff";
@@ -163,7 +164,7 @@ function App() {
     >
       {/* TITLE */}
       <h1 style={{ color: darkMode ? "#fff" : "#111" }}>
-        📘 Dictionary
+        📘 Technical Dictionary
       </h1>
 
       {/* CONTROLS */}
