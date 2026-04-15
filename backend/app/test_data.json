@@ -218,5 +218,35 @@
     "author": "Admin",
     "status": "approved",
     "created_at": "2026-03-31T10:21:00Z"
+  },
+   {
+    "word": "Triage",
+    "definition": "The process of prioritizing tasks or issues based on urgency and importance.",
+    "grammar_class": "noun",
+    "topic": "Systems / Operations",
+    "example": "The support team uses triage to handle incoming bug reports.",
+    "author": "Admin",
+    "status": "approved",
+    "created_at": "2026-04-15T10:15:00Z"
+  }, 
+  {
+    "word": "Tokenization",
+    "definition": "The process of splitting text or data into smaller units called tokens for processing.",
+    "grammar_class": "noun",
+    "topic": "NLP",
+    "example": "Tokenization is the first step in most natural language processing pipelines.",
+    "author": "Admin",
+    "status": "approved",
+    "created_at": "2026-04-15T10:00:00Z"
+  },
+  {
+    "word": "Token",
+    "definition": "A unit of data used in computing, often representing a word, character, or authentication credential.",
+    "grammar_class": "noun",
+    "topic": "Security / NLP",
+    "example": "The API requires a valid access token for authentication.",
+    "author": "Admin",
+    "status": "approved",
+    "created_at": "2026-04-15T10:05:00Z"
   }
 ]

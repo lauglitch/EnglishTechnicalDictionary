@@ -4,7 +4,7 @@ import axios from "axios";
 const API = "http://127.0.0.1:8000/words";
 const PAGE_SIZE = 3;
 
-/* ---------------- BOOK ITEM COMPONENT ---------------- */
+/* ---------------- BOOK ITEM ---------------- */
 function BookItem({ word, darkMode }) {
   const [open, setOpen] = useState(false);
 
@@ -48,9 +48,8 @@ function BookItem({ word, darkMode }) {
 /* ---------------- MAIN APP ---------------- */
 function App() {
   const [words, setWords] = useState([]);
-  const [index, setIndex] = useState(0);
-
   const [currentWord, setCurrentWord] = useState(null);
+
   const [search, setSearch] = useState("");
 
   const [revealed, setRevealed] = useState(false);
@@ -61,11 +60,12 @@ function App() {
   const [studyMode, setStudyMode] = useState(true);
 
   const [page, setPage] = useState(0);
+  const [activeLetter, setActiveLetter] = useState(null);
+  const [total, setTotal] = useState(0);
 
-  const current = words.length > 0 ? words[index] : null;
-  current;
-  
-  /* ---------------- BODY BACKGROUND FIX ---------------- */
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+  /* ---------------- BODY ---------------- */
   useEffect(() => {
     document.body.style.backgroundColor = darkMode ? "#111" : "#fff";
     document.body.style.margin = "0";
@@ -88,7 +88,7 @@ function App() {
     }
   };
 
-  /* ---------------- LOAD BOOK PAGE ---------------- */
+  /* ---------------- LOAD ALL ---------------- */
   const loadPage = async (pageNumber = 0) => {
     try {
       const skip = pageNumber * PAGE_SIZE;
@@ -97,20 +97,52 @@ function App() {
         `${API}/?skip=${skip}&limit=${PAGE_SIZE}`
       );
 
-      const sorted = res.data.sort((a, b) =>
-        a.word.toLowerCase().localeCompare(b.word.toLowerCase())
-      );
+      const data = res.data;
 
-      setWords(sorted);
+      setWords(data.items);
+      setTotal(data.total);
+
       setPage(pageNumber);
-      setIndex(0);
+      setActiveLetter(null);
       setRevealed(false);
     } catch (err) {
       console.error(err);
     }
   };
 
-  /* ---------------- MODE SWITCH ---------------- */
+  /* ---------------- LOAD LETTER ---------------- */
+  const loadLetterPage = async (letter, pageNumber = 0) => {
+    try {
+      const skip = pageNumber * PAGE_SIZE;
+
+      const res = await axios.get(
+        `${API}/letter/${letter}?skip=${skip}&limit=${PAGE_SIZE}`
+      );
+
+      const data = res.data;
+
+      setWords(data.items);
+      setTotal(data.total);
+
+      setPage(pageNumber);
+      setRevealed(false);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  /* ---------------- A-Z + ALL ---------------- */
+  const handleLetterClick = (letter) => {
+    setActiveLetter(letter);
+    loadLetterPage(letter, 0);
+  };
+
+  const handleAllClick = () => {
+    setActiveLetter(null);
+    loadPage(0);
+  };
+
+  /* ---------------- MODE ---------------- */
   const toggleMode = async () => {
     if (mode === "card") {
       await loadPage(0);
@@ -118,11 +150,15 @@ function App() {
     } else {
       setMode("card");
       setWords([]);
-      setIndex(0);
     }
   };
 
-  /* ---------------- KEYBOARD (BOOK MODE ONLY) ---------------- */
+  /* ---------------- PAGINATION ---------------- */
+  const maxPages = Math.ceil(total / PAGE_SIZE);
+  const canGoNext = page + 1 < maxPages;
+  const canGoPrev = page > 0;
+
+  /* ---------------- KEYBOARD ---------------- */
   useEffect(() => {
     const handleKey = (e) => {
       if (mode !== "book") return;
@@ -131,16 +167,6 @@ function App() {
       if (e.code === "Space") {
         e.preventDefault();
         setRevealed((r) => !r);
-      }
-
-      if (e.key === "ArrowRight") {
-        setIndex((i) => Math.min(i + 1, words.length - 1));
-        setRevealed(false);
-      }
-
-      if (e.key === "ArrowLeft") {
-        setIndex((i) => Math.max(i - 1, 0));
-        setRevealed(false);
       }
     };
 
@@ -162,7 +188,6 @@ function App() {
         paddingTop: "40px",
       }}
     >
-      {/* TITLE */}
       <h1 style={{ color: darkMode ? "#fff" : "#111" }}>
         📘 Technical Dictionary
       </h1>
@@ -191,15 +216,22 @@ function App() {
       </div>
 
       {/* BOOK MODE */}
-      {mode === "book" ? (
-        <div
-          style={{
-            width: "100%",
-            display: "flex",
-            justifyContent: "center",
-          }}
-        >
+      {mode === "book" && (
+        <div style={{ width: "100%", display: "flex", justifyContent: "center" }}>
           <div style={{ maxWidth: "700px", width: "100%", padding: "0 20px" }}>
+
+            {/* A-Z + ALL */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", justifyContent: "center" }}>
+              <button onClick={handleAllClick}>All</button>
+
+              {alphabet.map((l) => (
+                <button key={l} onClick={() => handleLetterClick(l)}>
+                  {l}
+                </button>
+              ))}
+            </div>
+
+            {/* WORDS */}
             {words.map((w, i) => (
               <BookItem key={i} word={w} darkMode={darkMode} />
             ))}
@@ -215,22 +247,42 @@ function App() {
               }}
             >
               <button
-                onClick={() => loadPage(page - 1)}
-                disabled={page === 0}
+                onClick={() => {
+                  const newPage = page - 1;
+                  if (newPage < 0) return;
+
+                  if (activeLetter) loadLetterPage(activeLetter, newPage);
+                  else loadPage(newPage);
+                }}
+                disabled={!canGoPrev}
               >
                 ⬅️ Prev
               </button>
 
-              <span>Page {page + 1}</span>
+              <span>
+                Page {page + 1} / {maxPages || 1}
+              </span>
 
-              <button onClick={() => loadPage(page + 1)}>
+              <button
+                onClick={() => {
+                  const newPage = page + 1;
+                  if (!canGoNext) return;
+
+                  if (activeLetter) loadLetterPage(activeLetter, newPage);
+                  else loadPage(newPage);
+                }}
+                disabled={!canGoNext}
+              >
                 Next ➡️
               </button>
             </div>
+
           </div>
         </div>
-      ) : (
-        /* CARD MODE */
+      )}
+
+      {/* CARD MODE */}
+      {mode === "card" && (
         <div
           style={{
             border: "1px solid #333",
@@ -243,42 +295,28 @@ function App() {
           }}
         >
           {!hasSearched || !currentWord ? (
-            <p style={{ color: "#aaa", fontSize: "18px" }}>
+            <p style={{ color: "#aaa" }}>
               📘 Use the search bar to discover interesting words
             </p>
           ) : (
             <div>
-              <h2 style={{ fontSize: "30px" }}>
-                {currentWord.word}
-              </h2>
+              <h2>{currentWord.word}</h2>
 
               {studyMode ? (
                 !revealed ? (
-                  <p
-                    onClick={() => setRevealed(true)}
-                    style={{ color: "#888", cursor: "pointer" }}
-                  >
+                  <p onClick={() => setRevealed(true)} style={{ cursor: "pointer", color: "#888" }}>
                     Click or press SPACE to reveal
                   </p>
                 ) : (
                   <>
                     <p>{currentWord.definition}</p>
-                    <hr />
-                    <p><b>Example:</b> {currentWord.example || "-"}</p>
-                    <p><b>Grammar:</b> {currentWord.grammar_class || "-"}</p>
-                    <p><b>Topic:</b> {currentWord.topic || "-"}</p>
-                    <p><b>Author:</b> {currentWord.author}</p>
-                    <p><b>Status:</b> {currentWord.status}</p>
+                    <p>{currentWord.example}</p>
                   </>
                 )
               ) : (
                 <>
-                  <p><b>Definition:</b> {currentWord.definition}</p>
-                  <p><b>Example:</b> {currentWord.example || "-"}</p>
-                  <p><b>Grammar:</b> {currentWord.grammar_class || "-"}</p>
-                  <p><b>Topic:</b> {currentWord.topic || "-"}</p>
-                  <p><b>Author:</b> {currentWord.author}</p>
-                  <p><b>Status:</b> {currentWord.status}</p>
+                  <p>{currentWord.definition}</p>
+                  <p>{currentWord.example}</p>
                 </>
               )}
             </div>

@@ -117,24 +117,26 @@ def reset_test_data(db):
     from datetime import datetime
     from . import models
 
-    # Path to JSON file
     file_path = Path(__file__).parent / "test_data.json"
 
-    # Load JSON data
     with open(file_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    # Clear old data
-    db.query(models.Word).delete()
+    try:
+        db.query(models.Word).delete()
 
-    # Add new data
-    for w in data:
-        # Convert created_at string to datetime
-        if isinstance(w.get("created_at"), str):
-            w["created_at"] = datetime.fromisoformat(
-                w["created_at"].replace("Z", "+00:00")
-            )
-        db.add(models.Word(**w))
+        for w in data:
+            if isinstance(w.get("created_at"), str):
+                w["created_at"] = datetime.fromisoformat(
+                    w["created_at"].replace("Z", "+00:00")
+                )
 
-    db.commit()
+            db.add(models.Word(**w))
+
+        db.commit()
+
+    except Exception as e:
+        db.rollback()
+        raise e
+
     return len(data)

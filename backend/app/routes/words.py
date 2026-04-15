@@ -1,9 +1,10 @@
 # app/words.py
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List
 
-from app import crud, schemas
+from app import crud, schemas, models
 from app.database import SessionLocal
 
 router = APIRouter(prefix="/words", tags=["words"])
@@ -38,19 +39,36 @@ def reset_test_words(db: Session = Depends(get_db)):
 # -------------------------
 # GET ALL WORDS (PAGINATED)
 # -------------------------
-@router.get("/", response_model=List[schemas.Word])
+@router.get("/")
 def get_all_words(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
-    return crud.get_words(db, skip=skip, limit=limit)
+    query = db.query(models.Word)
+
+    total = query.count()
+
+    items = query.order_by(models.Word.word.asc()).offset(skip).limit(limit).all()
+
+    return {"items": items, "total": total}
 
 
 # -------------------------
 # GET BY LETTER
 # -------------------------
-@router.get("/letter/{letter}", response_model=List[schemas.Word])
-def get_words_by_letter(letter: str, db: Session = Depends(get_db)):
+@router.get("/letter/{letter}")
+def get_words_by_letter(
+    letter: str, skip: int = 0, limit: int = 10, db: Session = Depends(get_db)
+):
     if len(letter) != 1:
         raise HTTPException(status_code=400, detail="Only one letter allowed")
-    return crud.get_words_by_first_letter(db, letter)
+
+    query = db.query(models.Word).filter(
+        func.lower(models.Word.word).startswith(letter.lower())
+    )
+
+    total = query.count()
+
+    items = query.order_by(models.Word.word.asc()).offset(skip).limit(limit).all()
+
+    return {"items": items, "total": total}
 
 
 # -------------------------
