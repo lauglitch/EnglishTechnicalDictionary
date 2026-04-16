@@ -66,6 +66,7 @@ function App() {
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
+  console.log("vercel test auto deploy");
   /* ---------------- BODY ---------------- */
   useEffect(() => {
     document.body.style.backgroundColor = darkMode ? "#111" : "#fff";
