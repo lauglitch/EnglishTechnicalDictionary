@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 //const API = "http://127.0.0.1:8000/words";
-const API = "https://englishtechnicaldictionary.onrender.com/words";
+const API = "https://englishtechnicaldictionary.onrender.com";
 const PAGE_SIZE = 3;
 
 /* ---------------- BOOK ITEM ---------------- */
@@ -77,7 +77,7 @@ function App() {
     if (!search) return;
 
     try {
-      const res = await axios.get(`${API}/${search.toLowerCase()}`);
+      const res = await axios.get(`${API}/words/${search.toLowerCase()}`);
 
       setCurrentWord(res.data);
       setHasSearched(true);
@@ -95,7 +95,7 @@ function App() {
       const skip = pageNumber * PAGE_SIZE;
 
       const res = await axios.get(
-        `${API}/?skip=${skip}&limit=${PAGE_SIZE}`
+        `${API}/words/?skip=${skip}&limit=${PAGE_SIZE}`
       );
 
       const data = res.data;
@@ -117,7 +117,7 @@ function App() {
       const skip = pageNumber * PAGE_SIZE;
 
       const res = await axios.get(
-        `${API}/letter/${letter}?skip=${skip}&limit=${PAGE_SIZE}`
+        `${API}/words/letter/${letter}?skip=${skip}&limit=${PAGE_SIZE}`
       );
 
       const data = res.data;
