@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-const API = "http://127.0.0.1:8000/words";
+//const API = "http://127.0.0.1:8000/words";
+const API = "https://englishtechnicaldictionary.onrender.com/words";
 const PAGE_SIZE = 3;
 
 /* ---------------- BOOK ITEM ---------------- */
