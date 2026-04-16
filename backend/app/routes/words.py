@@ -41,7 +41,7 @@ def reset_test_words(db: Session = Depends(get_db)):
 # -------------------------
 @router.get("/")
 def get_all_words(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
-    query = db.query(models.Word)
+    query = db.query(models.Word).filter(models.Word.status == "approved")
 
     total = query.count()
 
@@ -113,3 +113,20 @@ def delete_word(word_str: str, db: Session = Depends(get_db)):
     if not deleted:
         raise HTTPException(status_code=404, detail="Word not found")
     return {"deleted": True}
+
+
+# -------------------------
+# SUBMIT WORD
+# -------------------------
+@router.post("/submit")
+def submit_word(word: schemas.WordCreate, db: Session = Depends(get_db)):
+    new_word = crud.create_word(db, word, user_id=1)
+
+    if not new_word:
+        raise HTTPException(status_code=400, detail="Word already exists")
+
+    new_word.status = "pending"
+    db.commit()
+    db.refresh(new_word)
+
+    return new_word

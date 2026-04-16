@@ -1,9 +1,10 @@
 # main.py
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.routes.words import router as words_router
 from . import models
 from .database import engine
 from .routes import words
-from fastapi.middleware.cors import CORSMiddleware
 
 # Create all tables in the database (if they don't exist)
 models.Base.metadata.create_all(bind=engine)
@@ -26,6 +27,11 @@ app.add_middleware(
 
 # Include your router(s)
 app.include_router(words.router)
+
+
+@app.get("/")
+def root():
+    return {"status": "API running"}
 
 
 # Optional: startup event for logging

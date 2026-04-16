@@ -14,6 +14,6 @@ class Word(Base):
     grammar_class = Column(String, nullable=True)
     topic = Column(String, nullable=True)
     example = Column(String, nullable=True)
-    status = Column(String, default="approved")
+    status = Column(String, default="pending")  # pending | approved | rejected
     author = Column(String, nullable=False, default="Admin")
     created_at = Column(DateTime, default=datetime.utcnow)

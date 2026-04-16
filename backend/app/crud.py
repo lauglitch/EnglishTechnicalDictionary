@@ -111,6 +111,7 @@ def delete_all_words(db: Session):
     return deleted_count
 
 
+# RESET ALL WORDS (debug utility)
 def reset_test_data(db):
     import json
     from pathlib import Path
