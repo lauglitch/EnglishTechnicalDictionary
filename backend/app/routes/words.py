@@ -130,3 +130,33 @@ def submit_word(word: schemas.WordCreate, db: Session = Depends(get_db)):
     db.refresh(new_word)
 
     return new_word
+
+
+# -------------------------
+# GET PENDING WORDS
+# -------------------------
+@router.get("/pending")
+def get_pending(db: Session = Depends(get_db)):
+    return db.query(models.Word).filter(models.Word.status == "pending").all()
+
+
+# -------------------------
+# APPROVE WORD
+# -------------------------
+@router.patch("/{word_id}/approve")
+def approve_word(word_id: int, db: Session = Depends(get_db)):
+    word = db.query(models.Word).get(word_id)
+    word.status = "approved"
+    db.commit()
+    return word
+
+
+# -------------------------
+# REJECT WORD
+# -------------------------
+@router.patch("/{word_id}/reject")
+def reject_word(word_id: int, db: Session = Depends(get_db)):
+    word = db.query(models.Word).get(word_id)
+    word.status = "rejected"
+    db.commit()
+    return word

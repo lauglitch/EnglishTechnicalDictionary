@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Float, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 
@@ -17,3 +17,6 @@ class Word(Base):
     status = Column(String, default="pending")  # pending | approved | rejected
     author = Column(String, nullable=False, default="Admin")
     created_at = Column(DateTime, default=datetime.utcnow)
+    ai_score = Column(Float, nullable=True)
+    ai_flags = Column(String, nullable=True)
+    ai_approved = Column(Boolean, default=False)

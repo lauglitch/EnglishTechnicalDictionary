@@ -5,17 +5,27 @@ from pathlib import Path
 import json
 from fastapi import HTTPException
 from datetime import datetime
+from app.services.moderation import analyze_word
 
 
 # CREATE
 def create_word(db: Session, word: schemas.WordCreate, user_id: int):
+    from fastapi import HTTPException
+    from sqlalchemy import func
+    from app.services.moderation import analyze_word
+
+    # AI analysis
+    analysis = analyze_word(word.word, word.definition)
+
+    # Duplicate check
     existing = (
         db.query(models.Word)
         .filter(func.lower(models.Word.word) == word.word.lower())
         .first()
     )
     if existing:
-        return None
+        raise HTTPException(status_code=400, detail="Word already exists")
+
     try:
         db_word = models.Word(
             word=word.word,
@@ -24,15 +34,21 @@ def create_word(db: Session, word: schemas.WordCreate, user_id: int):
             topic=word.topic,
             example=word.example,
             author_id=user_id,
-            status="approved",
+            status="pending",
+            ai_score=analysis["score"],
+            ai_flags=",".join(analysis["flags"]) if analysis["flags"] else None,
+            ai_approved=analysis["approved_by_ai"],
         )
+
         db.add(db_word)
         db.commit()
         db.refresh(db_word)
+
         return db_word
+
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
 # -------------------------
