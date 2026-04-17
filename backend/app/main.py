@@ -28,6 +28,12 @@ def root():
     return {"status": "API running"}
 
 
+@app.get("/ping")
+@app.head("/ping")
+def ping():
+    return {"status": "ok"}
+
+
 # Optional: startup event for logging
 @app.on_event("startup")
 async def startup_event():
