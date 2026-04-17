@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Analytics } from "@vercel/analytics/next"
+//import { Analytics } from "@vercel/analytics/next"
 
 //const API = "http://127.0.0.1:8000/words";
 const API = "https://englishtechnicaldictionary.onrender.com";
@@ -193,6 +193,7 @@ function App() {
       <h1 style={{ color: darkMode ? "#fff" : "#111" }}>
         📘 Technical Dictionary
       </h1>
+      
 
       {/* CONTROLS */}
       <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
@@ -215,6 +216,7 @@ function App() {
         <button onClick={() => setStudyMode(!studyMode)}>
           {studyMode ? "👁️ Study ON" : "👓 Study OFF"}
         </button>
+
       </div>
 
       {/* BOOK MODE */}
@@ -325,6 +327,7 @@ function App() {
           )}
         </div>
       )}
+    <div> <Analytics /></div>
     </div>
   );
 }
