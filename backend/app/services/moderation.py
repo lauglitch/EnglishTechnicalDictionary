@@ -1,37 +1,47 @@
-import re
+def detect_grammar_class(word: str):
+    word = word.lower()
 
-BAD_WORDS = ["fuck", "shit", "bitch"]
-TECH_MIN_LENGTH = 3
+    if word.endswith("ing"):
+        return "verb"
+    if word.endswith("tion"):
+        return "noun"
+    if word.endswith("ly"):
+        return "adverb"
+    if word.endswith("ive"):
+        return "adjective"
+
+    return "noun"
 
 
-def analyze_word(word: str, definition: str):
-    text = f"{word} {definition}".lower()
+def analyze_word(word: str, definition: str, example: str, topic: str):
+    text = f"{word} {definition} {example} {topic}".lower()
 
     score = 1.0
     flags = []
 
-    # profanity
-    for bad in BAD_WORDS:
-        if bad in text:
-            score -= 0.7
-            flags.append("profanity")
+    if any(bad in text for bad in ["fuck", "shit", "bitch"]):
+        score -= 0.7
+        flags.append("profanity")
 
-    # links (spam)
-    if "http" in text:
-        score -= 0.5
-        flags.append("contains_link")
-
-    # too short
-    if len(word) < TECH_MIN_LENGTH:
-        score -= 0.4
-        flags.append("too_short")
-
-    # non-technical (very basic heuristic)
-    if len(definition.split()) < 3:
+    if len(definition.split()) < 4:
         score -= 0.3
-        flags.append("low_quality_definition")
+        flags.append("weak_definition")
 
-    # normalize
+    if example and len(example.split()) < 4:
+        score -= 0.2
+        flags.append("weak_example")
+
+    if topic and len(topic) < 3:
+        score -= 0.2
+        flags.append("weak_topic")
+
+    grammar_class = detect_grammar_class(word)
+
     score = max(0.0, min(score, 1.0))
 
-    return {"score": score, "flags": flags, "approved_by_ai": score > 0.6}
+    return {
+        "score": score,
+        "flags": flags,
+        "approved_by_ai": score > 0.6,
+        "grammar_class": grammar_class,
+    }

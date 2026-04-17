@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List
+from datetime import datetime
 
 from app import crud, schemas, models
 from app.database import SessionLocal
@@ -146,7 +147,13 @@ def get_pending(db: Session = Depends(get_db)):
 @router.patch("/{word_id}/approve")
 def approve_word(word_id: int, db: Session = Depends(get_db)):
     word = db.query(models.Word).get(word_id)
+
+    if not word:
+        raise HTTPException(404, "Word not found")
+
     word.status = "approved"
+    word.created_at = datetime.utcnow()
+
     db.commit()
     return word
 
@@ -157,6 +164,10 @@ def approve_word(word_id: int, db: Session = Depends(get_db)):
 @router.patch("/{word_id}/reject")
 def reject_word(word_id: int, db: Session = Depends(get_db)):
     word = db.query(models.Word).get(word_id)
+
+    if not word:
+        raise HTTPException(404, "Word not found")
+
     word.status = "rejected"
     db.commit()
     return word
