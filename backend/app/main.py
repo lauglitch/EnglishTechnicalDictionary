@@ -5,6 +5,8 @@ from app.routes.words import router as words_router
 from . import models
 from .database import engine
 from .routes import words
+from app.database import engine
+
 
 # Create all tables in the database (if they don't exist)
 models.Base.metadata.create_all(bind=engine)

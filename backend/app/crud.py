@@ -49,9 +49,11 @@ def create_word(db: Session, word: schemas.WordCreate, user_id: int):
 
 
 # ---------------- RESET TEST DATA ----------------
-def reset_test_data(db: Session):
+def reset_test_data(db):
     import json
     from pathlib import Path
+    from datetime import datetime
+    from . import models
 
     file_path = Path(__file__).parent / "test_data.json"
 
@@ -61,21 +63,26 @@ def reset_test_data(db: Session):
     db.query(models.Word).delete()
 
     for w in data:
-        db_word = models.Word(
-            word=w.get("word"),
-            definition=w.get("definition"),
-            example=w.get("example"),
-            topic=w.get("topic"),
-            grammar_class=w.get("grammar_class", "noun"),
-            author_id=None,
-            status="approved",
-            created_at=datetime.utcnow(),
-            ai_score=1.0,
-            ai_flags=None,
-            ai_approved=True,
-        )
+        try:
+            db_word = models.Word(
+                word=w.get("word"),
+                definition=w.get("definition"),
+                example=w.get("example"),
+                topic=w.get("topic"),
+                grammar_class=w.get("grammar_class", "noun"),
+                author_id=None,
+                status="approved",
+                ai_score=1.0,
+                ai_flags=None,
+                ai_approved=True,
+                created_at=datetime.utcnow(),
+            )
 
-        db.add(db_word)
+            db.add(db_word)
+
+        except Exception as e:
+            print("RESET ERROR:", e)
 
     db.commit()
-    return {"message": "Test data loaded"}
+
+    return {"message": "reset ok"}
