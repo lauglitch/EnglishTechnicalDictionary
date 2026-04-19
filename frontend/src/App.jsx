@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-//import { Analytics } from "@vercel/analytics/next"
 
-//const API = "http://127.0.0.1:8000/words";
-const API = "https://englishtechnicaldictionary.onrender.com";
+const API = "https://englishtechnicaldictionary.onrender.com/words";
 const PAGE_SIZE = 3;
 
 /* ---------------- BOOK ITEM ---------------- */
@@ -51,7 +49,6 @@ function BookItem({ word, darkMode }) {
 function App() {
   const [words, setWords] = useState([]);
   const [currentWord, setCurrentWord] = useState(null);
-
   const [search, setSearch] = useState("");
 
   const [revealed, setRevealed] = useState(false);
@@ -63,7 +60,7 @@ function App() {
 
   const [page, setPage] = useState(0);
   const [activeLetter, setActiveLetter] = useState(null);
-  const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
@@ -73,12 +70,28 @@ function App() {
     document.body.style.margin = "0";
   }, [darkMode]);
 
+  /* ---------------- PARSER ---------------- */
+  const parseResponse = (res) => {
+    const data = res.data;
+
+    const list = Array.isArray(data)
+      ? data
+      : data?.items || [];
+
+    const hasMore =
+      Array.isArray(data)
+        ? list.length === PAGE_SIZE
+        : data?.hasMore ?? false;
+
+    return { list, hasMore };
+  };
+
   /* ---------------- SEARCH ---------------- */
   const handleSearch = async () => {
     if (!search) return;
 
     try {
-      const res = await axios.get(`${API}/words/${search.toLowerCase()}`);
+      const res = await axios.get(`${API}/${search.toLowerCase()}`);
 
       setCurrentWord(res.data);
       setHasSearched(true);
@@ -90,50 +103,37 @@ function App() {
     }
   };
 
-  /* ---------------- LOAD ALL ---------------- */
+  /* ---------------- LOAD PAGE ---------------- */
   const loadPage = async (pageNumber = 0) => {
-    try {
-      const skip = pageNumber * PAGE_SIZE;
+    const skip = pageNumber * PAGE_SIZE;
 
-      const res = await axios.get(
-        `${API}/words/?skip=${skip}&limit=${PAGE_SIZE}`
-      );
+    const res = await axios.get(
+      `${API}/?skip=${skip}&limit=${PAGE_SIZE}`
+    );
 
-      const data = res.data;
+    const { list, hasMore } = parseResponse(res);
 
-      setWords(data.items);
-      setTotal(data.total);
-
-      setPage(pageNumber);
-      setActiveLetter(null);
-      setRevealed(false);
-    } catch (err) {
-      console.error(err);
-    }
+    setWords(list);
+    setHasMore(hasMore);
+    setPage(pageNumber);
+    setActiveLetter(null);
   };
 
   /* ---------------- LOAD LETTER ---------------- */
   const loadLetterPage = async (letter, pageNumber = 0) => {
-    try {
-      const skip = pageNumber * PAGE_SIZE;
+    const skip = pageNumber * PAGE_SIZE;
 
-      const res = await axios.get(
-        `${API}/words/letter/${letter}?skip=${skip}&limit=${PAGE_SIZE}`
-      );
+    const res = await axios.get(
+      `${API}/letter/${letter.toLowerCase()}?skip=${skip}&limit=${PAGE_SIZE}`
+    );
 
-      const data = res.data;
+    const { list, hasMore } = parseResponse(res);
 
-      setWords(data.items);
-      setTotal(data.total);
-
-      setPage(pageNumber);
-      setRevealed(false);
-    } catch (err) {
-      console.error(err);
-    }
+    setWords(list);
+    setHasMore(hasMore);
+    setPage(pageNumber);
   };
 
-  /* ---------------- A-Z + ALL ---------------- */
   const handleLetterClick = (letter) => {
     setActiveLetter(letter);
     loadLetterPage(letter, 0);
@@ -144,7 +144,6 @@ function App() {
     loadPage(0);
   };
 
-  /* ---------------- MODE ---------------- */
   const toggleMode = async () => {
     if (mode === "card") {
       await loadPage(0);
@@ -154,27 +153,6 @@ function App() {
       setWords([]);
     }
   };
-
-  /* ---------------- PAGINATION ---------------- */
-  const maxPages = Math.ceil(total / PAGE_SIZE);
-  const canGoNext = page + 1 < maxPages;
-  const canGoPrev = page > 0;
-
-  /* ---------------- KEYBOARD ---------------- */
-  useEffect(() => {
-    const handleKey = (e) => {
-      if (mode !== "book") return;
-      if (!words.length) return;
-
-      if (e.code === "Space") {
-        e.preventDefault();
-        setRevealed((r) => !r);
-      }
-    };
-
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [mode, words]);
 
   /* ---------------- UI ---------------- */
   return (
@@ -187,110 +165,122 @@ function App() {
         flexDirection: "column",
         alignItems: "center",
         fontFamily: "Arial",
-        paddingTop: "40px",
+        padding: "20px",
       }}
     >
-      <h1 style={{ color: darkMode ? "#fff" : "#111" }}>
-        📘 Technical Dictionary
-      </h1>
-      
+      <h1>📘 Technical Dictionary</h1>
 
       {/* CONTROLS */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "10px",
+          justifyContent: "center",
+          marginBottom: "20px",
+          width: "100%",
+          maxWidth: "600px",
+        }}
+      >
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search word..."
+          style={{
+            flex: "1",
+            minWidth: "150px",
+            padding: "8px",
+          }}
         />
 
         <button onClick={handleSearch}>Search</button>
-
         <button onClick={toggleMode}>
-          {mode === "card" ? "📖 Book Mode" : "🃏 Card Mode"}
+          {mode === "card" ? "📖 Book" : "🃏 Card"}
         </button>
 
         <button onClick={() => setDarkMode(!darkMode)}>
-          {darkMode ? "☀️ Light" : "🌙 Dark"}
+          {darkMode ? "☀️" : "🌙"}
         </button>
 
         <button onClick={() => setStudyMode(!studyMode)}>
-          {studyMode ? "👁️ Study ON" : "👓 Study OFF"}
+          {studyMode ? "👁️" : "👓"}
         </button>
-
       </div>
 
       {/* BOOK MODE */}
-      {mode === "book" && (
-        <div style={{ width: "100%", display: "flex", justifyContent: "center" }}>
-          <div style={{ maxWidth: "700px", width: "100%", padding: "0 20px" }}>
+      {mode === "book" ? (
+        <div style={{ width: "100%", maxWidth: "700px" }}>
 
-            {/* A-Z + ALL */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", justifyContent: "center" }}>
-              <button onClick={handleAllClick}>All</button>
-
-              {alphabet.map((l) => (
-                <button key={l} onClick={() => handleLetterClick(l)}>
-                  {l}
-                </button>
-              ))}
-            </div>
-
-            {/* WORDS */}
-            {words.map((w, i) => (
-              <BookItem key={i} word={w} darkMode={darkMode} />
+          {/* A-Z GRID */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(30px, 1fr))",
+              gap: "6px",
+              marginBottom: "15px",
+            }}
+          >
+            {alphabet.map((l) => (
+              <button key={l} onClick={() => handleLetterClick(l)}>
+                {l}
+              </button>
             ))}
 
-            {/* PAGINATION */}
-            <div
-              style={{
-                marginTop: "20px",
-                display: "flex",
-                justifyContent: "center",
-                gap: "12px",
-                alignItems: "center",
+            {/* ALL BUTTON */}
+            <button onClick={handleAllClick}>All</button>
+          </div>
+
+          {/* WORDS */}
+          {words.map((w, i) => (
+            <BookItem key={i} word={w} darkMode={darkMode} />
+          ))}
+
+          {/* PAGINATION */}
+          <div
+            style={{
+              marginTop: "20px",
+              display: "flex",
+              justifyContent: "center",
+              gap: "10px",
+              flexWrap: "wrap",
+            }}
+          >
+            <button
+              onClick={() => {
+                if (page === 0) return;
+                const newPage = page - 1;
+
+                activeLetter
+                  ? loadLetterPage(activeLetter, newPage)
+                  : loadPage(newPage);
               }}
+              disabled={page === 0}
             >
-              <button
-                onClick={() => {
-                  const newPage = page - 1;
-                  if (newPage < 0) return;
+              ⬅️ Prev
+            </button>
 
-                  if (activeLetter) loadLetterPage(activeLetter, newPage);
-                  else loadPage(newPage);
-                }}
-                disabled={!canGoPrev}
-              >
-                ⬅️ Prev
-              </button>
+            <span>Page {page + 1}</span>
 
-              <span>
-                Page {page + 1} / {maxPages || 1}
-              </span>
+            <button
+              onClick={() => {
+                if (!hasMore) return;
+                const newPage = page + 1;
 
-              <button
-                onClick={() => {
-                  const newPage = page + 1;
-                  if (!canGoNext) return;
-
-                  if (activeLetter) loadLetterPage(activeLetter, newPage);
-                  else loadPage(newPage);
-                }}
-                disabled={!canGoNext}
-              >
-                Next ➡️
-              </button>
-            </div>
-
+                activeLetter
+                  ? loadLetterPage(activeLetter, newPage)
+                  : loadPage(newPage);
+              }}
+              disabled={!hasMore}
+            >
+              Next ➡️
+            </button>
           </div>
         </div>
-      )}
-
-      {/* CARD MODE */}
-      {mode === "card" && (
+      ) : (
         <div
           style={{
             border: "1px solid #333",
-            padding: "40px",
+            padding: window.innerWidth < 500 ? "20px" : "40px",
             borderRadius: "12px",
             maxWidth: "500px",
             width: "100%",
@@ -300,34 +290,28 @@ function App() {
         >
           {!hasSearched || !currentWord ? (
             <p style={{ color: "#aaa" }}>
-              📘 Use the search bar to discover interesting words
+              📘 Search a word
             </p>
           ) : (
-            <div>
+            <>
               <h2>{currentWord.word}</h2>
 
-              {studyMode ? (
-                !revealed ? (
-                  <p onClick={() => setRevealed(true)} style={{ cursor: "pointer", color: "#888" }}>
-                    Click or press SPACE to reveal
-                  </p>
-                ) : (
-                  <>
-                    <p>{currentWord.definition}</p>
-                    <p>{currentWord.example}</p>
-                  </>
-                )
+              {studyMode && !revealed ? (
+                <p onClick={() => setRevealed(true)}>
+                  Click to reveal
+                </p>
               ) : (
                 <>
                   <p>{currentWord.definition}</p>
-                  <p>{currentWord.example}</p>
+                  <p><b>Example:</b> {currentWord.example}</p>
+                  <p><b>Grammar:</b> {currentWord.grammar_class}</p>
+                  <p><b>Topic:</b> {currentWord.topic}</p>
                 </>
               )}
-            </div>
+            </>
           )}
         </div>
       )}
-
     </div>
   );
 }
