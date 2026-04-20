@@ -19,8 +19,11 @@ app = FastAPI(title="English Technical Dictionary")
 # CORS configuration (for Vercel frontend)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # ⚠️ change later to Vercel domain
-    allow_credentials=True,
+    allow_origins=[
+        "https://english-technical-dictionary.vercel.app",
+        "http://localhost:3000",
+    ],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
