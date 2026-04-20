@@ -148,7 +148,7 @@ def get_pending(db: Session = Depends(get_db)):
 # -------------------------
 @router.patch("/{word_id}/approve")
 def approve_word(word_id: int, db: Session = Depends(get_db)):
-    word = db.query(models.Word).get(word_id)
+    word = word = db.get(models.Word, word_id)
 
     if not word:
         raise HTTPException(404, "Word not found")
@@ -165,7 +165,7 @@ def approve_word(word_id: int, db: Session = Depends(get_db)):
 # -------------------------
 @router.patch("/{word_id}/reject")
 def reject_word(word_id: int, db: Session = Depends(get_db)):
-    word = db.query(models.Word).get(word_id)
+    word = word = db.get(models.Word, word_id)
 
     if not word:
         raise HTTPException(404, "Word not found")

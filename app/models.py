@@ -1,7 +1,8 @@
 # DB TABLES
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime
 from sqlalchemy.orm import relationship
 from app.database import Base
+from datetime import datetime
 
 
 class Category(Base):
@@ -14,14 +15,21 @@ class Category(Base):
 class Word(Base):
     __tablename__ = "words"
 
-    id = Column(Integer, primary_key=True)
-    word = Column(String, unique=True, nullable=False, index=True)
-    definition = Column(Text, nullable=False)
+    id = Column(Integer, primary_key=True, index=True)
 
-    category_id = Column(Integer, ForeignKey("categories.id"))
-    difficulty = Column(Integer, default=1)
+    word = Column(String, index=True, nullable=False)
+    definition = Column(String, nullable=False)
 
-    category = relationship("Category")
+    grammar_class = Column(String, nullable=True)
+    topic = Column(String, nullable=True)
+
+    example = Column(String, nullable=True)
+    author = Column(String, default="Admin")
+
+    status = Column(String, default="approved")
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
     examples = relationship("Example", back_populates="word")
 
 
