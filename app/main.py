@@ -16,13 +16,21 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI(title="English Technical Dictionary")
 
 
+@app.middleware("http")
+async def debug_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Debug-CORS"] = "active"
+    return response
+
+
 # CORS configuration (for Vercel frontend)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://english-technical-dictionary.vercel.app",
-        "http://localhost:3000",
         "http://localhost:5173",
+        "http://localhost:3000",
+        "https://english-technical-dictionary.vercel.app",
+        "https://english-technical-dictionary-ehitif2lp-lauglitchs-projects.vercel.app",
     ],
     allow_credentials=False,
     allow_methods=["*"],
