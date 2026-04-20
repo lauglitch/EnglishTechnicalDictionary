@@ -39,7 +39,6 @@ function BookItem({ word, darkMode }) {
           <p><b>Topic:</b> {word.topic || "-"}</p>
           <p><b>Example:</b> {word.example || "-"}</p>
           <p><b>Author:</b> {word.author}</p>
-          <p><b>Status:</b> {word.status}</p>
         </div>
       )}
     </div>
@@ -61,10 +60,10 @@ function App() {
 
   const [page, setPage] = useState(0);
   const [activeLetter, setActiveLetter] = useState(null);
-  const [hasMore, setHasMore] = useState(true);
+
+  const [total, setTotal] = useState(0);
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-  const [total, setTotal] = useState(0);
 
   /* ---------------- BODY ---------------- */
   useEffect(() => {
@@ -73,18 +72,13 @@ function App() {
   }, [darkMode]);
 
   /* ---------------- PARSER ---------------- */
-  const parseResponse = (res, pageNumber) => {
+  const parseResponse = (res) => {
     const data = res.data;
 
-    const list = Array.isArray(data)
-      ? data
-      : data?.items || [];
-
+    const list = data?.items || [];
     const total = data?.total ?? 0;
 
-    const hasMore = (pageNumber + 1) * PAGE_SIZE < total;
-
-    return { list, hasMore, total };
+    return { list, total };
   };
 
   /* ---------------- SEARCH ---------------- */
@@ -112,11 +106,10 @@ function App() {
       `${API}/?skip=${skip}&limit=${PAGE_SIZE}`
     );
 
-    const { list, hasMore, total } = parseResponse(res, pageNumber);
+    const { list, total } = parseResponse(res);
 
     setWords(list);
-    setHasMore(hasMore);
-    setTotal(total);   // ✅ NEW
+    setTotal(total);
     setPage(pageNumber);
     setActiveLetter(null);
   };
@@ -129,11 +122,10 @@ function App() {
       `${API}/letter/${letter.toLowerCase()}?skip=${skip}&limit=${PAGE_SIZE}`
     );
 
-    const { list, hasMore, total } = parseResponse(res, pageNumber);
+    const { list, total } = parseResponse(res);
 
     setWords(list);
-    setHasMore(hasMore);
-    setTotal(total);   // ✅ NEW
+    setTotal(total);
     setPage(pageNumber);
   };
 
@@ -156,6 +148,9 @@ function App() {
       setWords([]);
     }
   };
+
+  /* ---------------- DERIVED VALUE ---------------- */
+  const hasMore = (page + 1) * PAGE_SIZE < total;
 
   /* ---------------- UI ---------------- */
   return (
@@ -229,7 +224,6 @@ function App() {
               </button>
             ))}
 
-            {/* ALL BUTTON */}
             <button onClick={handleAllClick}>All</button>
           </div>
 
