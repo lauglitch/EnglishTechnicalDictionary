@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-const API = "https://englishtechnicaldictionary.onrender.com/words";
+const API =
+  import.meta.env.VITE_API_URL || "http://localhost:8000/words";
 const PAGE_SIZE = 3;
 
 /* ---------------- BOOK ITEM ---------------- */
@@ -63,6 +64,7 @@ function App() {
   const [hasMore, setHasMore] = useState(true);
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+  const [total, setTotal] = useState(0);
 
   /* ---------------- BODY ---------------- */
   useEffect(() => {
@@ -71,19 +73,18 @@ function App() {
   }, [darkMode]);
 
   /* ---------------- PARSER ---------------- */
-  const parseResponse = (res) => {
+  const parseResponse = (res, pageNumber) => {
     const data = res.data;
 
     const list = Array.isArray(data)
       ? data
       : data?.items || [];
 
-    const hasMore =
-      Array.isArray(data)
-        ? list.length === PAGE_SIZE
-        : data?.hasMore ?? false;
+    const total = data?.total ?? 0;
 
-    return { list, hasMore };
+    const hasMore = (pageNumber + 1) * PAGE_SIZE < total;
+
+    return { list, hasMore, total };
   };
 
   /* ---------------- SEARCH ---------------- */
@@ -111,10 +112,11 @@ function App() {
       `${API}/?skip=${skip}&limit=${PAGE_SIZE}`
     );
 
-    const { list, hasMore } = parseResponse(res);
+    const { list, hasMore, total } = parseResponse(res, pageNumber);
 
     setWords(list);
     setHasMore(hasMore);
+    setTotal(total);   // ✅ NEW
     setPage(pageNumber);
     setActiveLetter(null);
   };
@@ -127,10 +129,11 @@ function App() {
       `${API}/letter/${letter.toLowerCase()}?skip=${skip}&limit=${PAGE_SIZE}`
     );
 
-    const { list, hasMore } = parseResponse(res);
+    const { list, hasMore, total } = parseResponse(res, pageNumber);
 
     setWords(list);
     setHasMore(hasMore);
+    setTotal(total);   // ✅ NEW
     setPage(pageNumber);
   };
 
@@ -259,7 +262,9 @@ function App() {
               ⬅️ Prev
             </button>
 
-            <span>Page {page + 1}</span>
+            <span>
+              Page {page + 1} / {Math.ceil(total / PAGE_SIZE)}
+            </span>
 
             <button
               onClick={() => {

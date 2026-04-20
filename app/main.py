@@ -22,6 +22,7 @@ app.add_middleware(
     allow_origins=[
         "https://english-technical-dictionary.vercel.app",
         "http://localhost:3000",
+        "http://localhost:5173",
     ],
     allow_credentials=False,
     allow_methods=["*"],
