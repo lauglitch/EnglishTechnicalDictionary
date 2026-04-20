@@ -5,8 +5,10 @@ from sqlalchemy import func
 from typing import List
 from datetime import datetime
 
-from app import crud, schemas, models
+from app import schemas
+from app import crud
 from app.database import SessionLocal
+from app import models
 
 router = APIRouter(prefix="/words", tags=["words"])
 

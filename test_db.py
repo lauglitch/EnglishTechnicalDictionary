@@ -1,11 +1,11 @@
 import os
-from backend.app.database import engine
+from app.database import engine
 from sqlalchemy import text
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from backend.app.database import engine
+from app.database import engine
 from sqlalchemy import text
 
 

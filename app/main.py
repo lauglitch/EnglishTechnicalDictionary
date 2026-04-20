@@ -1,30 +1,39 @@
-# API
+# app/main.py
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes.words import router as words_router
-from . import models
-from .database import engine
-from .routes import words
+
 from app.database import engine
+from app import models
+from app.routes import words, users  # adjust if you don't want users yet
 
 
-# Create all tables in the database (if they don't exist)
+# 🔹 Create tables (only if they don't exist)
 models.Base.metadata.create_all(bind=engine)
 
+
+# 🔹 Create FastAPI app
 app = FastAPI(title="English Technical Dictionary")
 
+
+# 🔹 CORS configuration (for Vercel frontend)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # ⚠️ change later to your Vercel domain
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include your router(s)
+
+# 🔹 Include routers
 app.include_router(words.router)
 
+# Optional (only if you have users routes ready)
+app.include_router(users.router)
 
+
+# 🔹 Basic endpoints
 @app.get("/")
 def root():
     return {"status": "API running"}
@@ -36,12 +45,12 @@ def ping():
     return {"status": "ok"}
 
 
-# Optional: startup event for logging
-@app.on_event("startup")
-async def startup_event():
-    print("✅ Database tables checked/created. FastAPI is ready.")
-
-
 @app.get("/CORScheck")
 def corscheck():
     return {"ok": True}
+
+
+# 🔹 Startup log
+@app.on_event("startup")
+async def startup_event():
+    print("✅ FastAPI started and database ready")

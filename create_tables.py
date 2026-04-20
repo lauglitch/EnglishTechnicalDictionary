@@ -1,6 +1,6 @@
 # CREATE SCHEMA
-from backend.app.database import engine
-from backend.app.models import Base
+from app.database import engine
+from app.models import Base
 
 
 def create_tables():

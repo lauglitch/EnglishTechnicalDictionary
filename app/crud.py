@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from fastapi import HTTPException
 from datetime import datetime
-from . import models, schemas
+from app import schemas
+from app import models
 from app.services.moderation import analyze_word
 
 
