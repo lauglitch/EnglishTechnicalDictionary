@@ -5,6 +5,8 @@ const API =
   import.meta.env.VITE_API_URL || "http://localhost:8000/words";
 const PAGE_SIZE = 3;
 
+console.log("API:", API);
+
 /* ---------------- BOOK ITEM ---------------- */
 function BookItem({ word, darkMode }) {
   const [open, setOpen] = useState(false);
