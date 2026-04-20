@@ -1,27 +1,44 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean
-from .database import Base
+# DB TABLES
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean
+from sqlalchemy.orm import relationship
+from backend.app.database import Base
 
 
-class Word(Base):
-    __tablename__ = "words"
+class Category(Base):
+    __tablename__ = "categories"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True)
+    name = Column(String, unique=True, nullable=False)
 
-    word = Column(String, unique=True, index=True, nullable=False)
-    definition = Column(String, nullable=False)
-    example = Column(String, nullable=True)
-    topic = Column(String, nullable=True)
 
-    grammar_class = Column(String, nullable=True)
+class Vocabulary(Base):
+    __tablename__ = "vocabulary"
 
-    author_id = Column(Integer, nullable=True)
+    id = Column(Integer, primary_key=True)
+    word = Column(String, unique=True, nullable=False, index=True)
+    definition = Column(Text, nullable=False)
 
-    status = Column(String, default="pending")
+    category_id = Column(Integer, ForeignKey("categories.id"))
+    difficulty = Column(Integer, default=1)
 
-    # AI
-    ai_score = Column(Float, nullable=True)
-    ai_flags = Column(String, nullable=True)
-    ai_approved = Column(Boolean, default=False)
+    category = relationship("Category")
+    examples = relationship("Example", back_populates="word")
 
-    # moderation lifecycle
-    created_at = Column(DateTime, nullable=True)
+
+class Example(Base):
+    __tablename__ = "examples"
+
+    id = Column(Integer, primary_key=True)
+    sentence = Column(Text, nullable=False)
+
+    word_id = Column(Integer, ForeignKey("vocabulary.id"))
+    word = relationship("Vocabulary", back_populates="examples")
+
+
+class UserProgress(Base):
+    __tablename__ = "user_progress"
+
+    id = Column(Integer, primary_key=True)
+
+    word_id = Column(Integer, ForeignKey("vocabulary.id"))
+    correct = Column(Boolean, default=False)
