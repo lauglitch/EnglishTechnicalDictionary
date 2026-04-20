@@ -77,11 +77,13 @@ def get_words_by_letter(
 # -------------------------
 # GET SINGLE WORD
 # -------------------------
-@router.get("/{word_str}", response_model=schemas.Word)
+@router.get("/{word_str}")
 def get_word(word_str: str, db: Session = Depends(get_db)):
     word = crud.get_word_by_name(db, word_str)
+
     if not word:
         raise HTTPException(status_code=404, detail="Word not found")
+
     return word
 
 
