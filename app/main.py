@@ -29,6 +29,13 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def debug_middleware(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Debug"] = "CORS_TEST"
+    return response
+
+
 # Include routers
 app.include_router(words.router)
 app.include_router(users.router)

@@ -11,8 +11,8 @@ class Category(Base):
     name = Column(String, unique=True, nullable=False)
 
 
-class Vocabulary(Base):
-    __tablename__ = "vocabulary"
+class Word(Base):
+    __tablename__ = "words"
 
     id = Column(Integer, primary_key=True)
     word = Column(String, unique=True, nullable=False, index=True)
@@ -31,8 +31,8 @@ class Example(Base):
     id = Column(Integer, primary_key=True)
     sentence = Column(Text, nullable=False)
 
-    word_id = Column(Integer, ForeignKey("vocabulary.id"))
-    word = relationship("Vocabulary", back_populates="examples")
+    word_id = Column(Integer, ForeignKey("words.id"))
+    word = relationship("Word", back_populates="examples")
 
 
 class UserProgress(Base):
@@ -40,5 +40,5 @@ class UserProgress(Base):
 
     id = Column(Integer, primary_key=True)
 
-    word_id = Column(Integer, ForeignKey("vocabulary.id"))
+    word_id = Column(Integer, ForeignKey("words.id"))
     correct = Column(Boolean, default=False)
