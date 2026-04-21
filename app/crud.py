@@ -11,51 +11,46 @@ from app.services.moderation import analyze_word
 
 # ---------------- CREATE ----------------
 def create_word(db: Session, word: schemas.WordCreate, user_id: int):
-
-    # Normalize input
-    word_text = word.word.strip()
-
-    # Check duplicates (safe + case insensitive)
+    # ---------------- CHECK DUPLICATE ----------------
     existing = (
         db.query(models.Word)
-        .filter(func.lower(models.Word.word) == word_text.lower())
+        .filter(func.lower(models.Word.word) == word.word.lower())
         .first()
     )
 
     if existing:
         raise HTTPException(status_code=400, detail="Word already exists")
 
-    # AI analysis (SAFE GUARD)
+    # ---------------- SAFE AI ANALYSIS ----------------
     try:
         analysis = analyze_word(
-            word_text, word.definition, word.example or "", word.topic or ""
+            word.word, word.definition, word.example or "", word.topic or ""
         )
     except Exception as e:
-        # IMPORTANT: never break API due to AI failure
+        print("AI ERROR:", e)
+
+        # fallback if AI fails
         analysis = {
-            "grammar_class": "unknown",
+            "grammar_class": "noun",
             "score": 0.0,
             "flags": [],
             "approved_by_ai": False,
         }
 
+    # ---------------- CREATE WORD ----------------
     try:
         db_word = models.Word(
-            word=word_text,
+            word=word.word,
             definition=word.definition,
             example=word.example,
             topic=word.topic,
-            # keep compatibility with your schema
-            author=getattr(word, "author", "Admin"),
+            # ⚠️ IMPORTANT: your model uses "author", NOT "author_id"
+            author="Admin",
             grammar_class=analysis.get("grammar_class", "noun"),
             status="pending",
-            created_at=datetime.utcnow(),
-            # AI fields (only if they exist in model)
-            ai_score=analysis.get("score"),
-            ai_flags=(
-                ",".join(analysis.get("flags", [])) if analysis.get("flags") else None
-            ),
-            ai_approved=analysis.get("approved_by_ai", False),
+            # ⚠️ Your model DOES NOT have ai_score, ai_flags, etc.
+            # so DO NOT include them
+            created_at=None,
         )
 
         db.add(db_word)
@@ -66,7 +61,8 @@ def create_word(db: Session, word: schemas.WordCreate, user_id: int):
 
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"DB insert error: {str(e)}")
+        print("DB ERROR:", e)
+        raise HTTPException(status_code=500, detail="Database error")
 
 
 # ---------------- GET BY NAME ----------------
