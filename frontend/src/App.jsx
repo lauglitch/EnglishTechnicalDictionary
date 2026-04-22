@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { supabase } from "./lib/supabase";
 
-const API =
-  import.meta.env.VITE_API_URL || "http://localhost:8000/words";
+import AdminDashboard from "./pages/AdminDashboard";
+
+const API = import.meta.env.VITE_API_URL || "http://localhost:8000/words";
 const PAGE_SIZE = 3;
-
-console.log("API:", API);
 
 /* ---------------- BOOK ITEM ---------------- */
 function BookItem({ word, darkMode }) {
@@ -15,32 +15,28 @@ function BookItem({ word, darkMode }) {
     <div
       style={{
         borderBottom: "1px solid #444",
-        padding: "12px 0",
+        padding: "12px",
+        background: darkMode ? "#1a1a1a" : "#f7f7f7",
+        borderRadius: "10px",
+        marginBottom: "10px",
       }}
     >
-      <h3 style={{ color: darkMode ? "#fff" : "#111" }}>
+      <h3 style={{ color: darkMode ? "#fff" : "#000" }}>
         {word.word}
       </h3>
 
       <p>{word.definition}</p>
 
-      <button
-        onClick={() => setOpen(!open)}
-        style={{
-          marginTop: "8px",
-          fontSize: "12px",
-          cursor: "pointer",
-        }}
-      >
+      <button onClick={() => setOpen(!open)} style={{ marginTop: 8 }}>
         {open ? "Hide" : "More"}
       </button>
 
       {open && (
-        <div style={{ marginTop: "10px", fontSize: "14px" }}>
+        <div style={{ marginTop: 10, fontSize: 14 }}>
           <p><b>Grammar:</b> {word.grammar_class || "-"}</p>
           <p><b>Topic:</b> {word.topic || "-"}</p>
           <p><b>Example:</b> {word.example || "-"}</p>
-          <p><b>Author:</b> {word.author}</p>
+          <p><b>Author:</b> {word.author || "-"}</p>
         </div>
       )}
     </div>
@@ -62,26 +58,62 @@ function App() {
 
   const [page, setPage] = useState(0);
   const [activeLetter, setActiveLetter] = useState(null);
-
   const [total, setTotal] = useState(0);
+
+  const [showAdmin, setShowAdmin] = useState(false);
+
+  const [session, setSession] = useState(null);
+  const [loadingSession, setLoadingSession] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [authError, setAuthError] = useState(null);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
-  /* ---------------- BODY ---------------- */
+  /* ---------------- SESSION ---------------- */
+  const handleLogin = async () => {
+  setAuthError(null);
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) {
+    setAuthError(error.message);
+    return;
+  }
+
+  if (data.session) {
+    setIsAdminAuthenticated(true);
+  }
+};
+
+  useEffect(() => {
+    const getSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      setSession(data.session);
+      setLoadingSession(false);
+    };
+
+    getSession();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, newSession) => {
+        setSession(newSession);
+        setLoadingSession(false);
+      }
+    );
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  /* ---------------- STYLE ---------------- */
   useEffect(() => {
     document.body.style.backgroundColor = darkMode ? "#111" : "#fff";
     document.body.style.margin = "0";
   }, [darkMode]);
-
-  /* ---------------- PARSER ---------------- */
-  const parseResponse = (res) => {
-    const data = res.data;
-
-    const list = data?.items || [];
-    const total = data?.total ?? 0;
-
-    return { list, total };
-  };
 
   /* ---------------- SEARCH ---------------- */
   const handleSearch = async () => {
@@ -92,7 +124,6 @@ function App() {
 
       setCurrentWord(res.data);
       setHasSearched(true);
-
       setMode("card");
       setRevealed(false);
     } catch {
@@ -104,14 +135,10 @@ function App() {
   const loadPage = async (pageNumber = 0) => {
     const skip = pageNumber * PAGE_SIZE;
 
-    const res = await axios.get(
-      `${API}/?skip=${skip}&limit=${PAGE_SIZE}`
-    );
+    const res = await axios.get(`${API}?skip=${skip}&limit=${PAGE_SIZE}`);
 
-    const { list, total } = parseResponse(res);
-
-    setWords(list);
-    setTotal(total);
+    setWords(res.data.items);
+    setTotal(res.data.total);
     setPage(pageNumber);
     setActiveLetter(null);
   };
@@ -124,10 +151,8 @@ function App() {
       `${API}/letter/${letter.toLowerCase()}?skip=${skip}&limit=${PAGE_SIZE}`
     );
 
-    const { list, total } = parseResponse(res);
-
-    setWords(list);
-    setTotal(total);
+    setWords(res.data.items);
+    setTotal(res.data.total);
     setPage(pageNumber);
   };
 
@@ -141,175 +166,261 @@ function App() {
     loadPage(0);
   };
 
+  /* ---------------- MODE SWITCH (FIXED START A) ---------------- */
   const toggleMode = async () => {
     if (mode === "card") {
       await loadPage(0);
+      setActiveLetter("A");   // 🔥 FORCE START FROM A
+      setPage(0);
       setMode("book");
+      loadLetterPage("A", 0);
     } else {
       setMode("card");
       setWords([]);
+      setActiveLetter(null);
+      setPage(0);
     }
   };
 
-  /* ---------------- DERIVED VALUE ---------------- */
   const hasMore = (page + 1) * PAGE_SIZE < total;
 
   /* ---------------- UI ---------------- */
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        backgroundColor: darkMode ? "#111" : "#fff",
-        color: darkMode ? "#fff" : "#000",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        fontFamily: "Arial",
-        padding: "20px",
-      }}
-    >
-      <h1>📘 Technical Dictionary</h1>
-
-      {/* CONTROLS */}
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "10px",
-          justifyContent: "center",
-          marginBottom: "20px",
-          width: "100%",
-          maxWidth: "600px",
-        }}
-      >
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search word..."
+    <div>
+      {showAdmin ? (
+      !isAdminAuthenticated ? (
+        /* ---------------- LOGIN PAGE ---------------- */
+        <div
           style={{
-            flex: "1",
-            minWidth: "150px",
-            padding: "8px",
+            minHeight: "100vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: darkMode ? "#111" : "#fff",
           }}
-        />
-
-        <button onClick={handleSearch}>Search</button>
-        <button onClick={toggleMode}>
-          {mode === "card" ? "📖 Book" : "🃏 Card"}
-        </button>
-
-        <button onClick={() => setDarkMode(!darkMode)}>
-          {darkMode ? "☀️" : "🌙"}
-        </button>
-
-        <button onClick={() => setStudyMode(!studyMode)}>
-          {studyMode ? "👁️" : "👓"}
-        </button>
-      </div>
-
-      {/* BOOK MODE */}
-      {mode === "book" ? (
-        <div style={{ width: "100%", maxWidth: "700px" }}>
-
-          {/* A-Z GRID */}
+        >
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(30px, 1fr))",
-              gap: "6px",
-              marginBottom: "15px",
+              width: 320,
+              padding: 20,
+              borderRadius: 10,
+              background: darkMode ? "#1a1a1a" : "#f5f5f5",
             }}
           >
-            {alphabet.map((l) => (
-              <button key={l} onClick={() => handleLetterClick(l)}>
-                {l}
-              </button>
-            ))}
+            <h2 style={{ color: darkMode ? "#fff" : "#000" }}>
+              Admin Login
+            </h2>
 
-            <button onClick={handleAllClick}>All</button>
-          </div>
+            <input
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              style={{ width: "100%", marginBottom: 10 }}
+            />
 
-          {/* WORDS */}
-          {words.map((w, i) => (
-            <BookItem key={i} word={w} darkMode={darkMode} />
-          ))}
-
-          {/* PAGINATION */}
-          <div
-            style={{
-              marginTop: "20px",
-              display: "flex",
-              justifyContent: "center",
-              gap: "10px",
-              flexWrap: "wrap",
-            }}
-          >
-            <button
-              onClick={() => {
-                if (page === 0) return;
-                const newPage = page - 1;
-
-                activeLetter
-                  ? loadLetterPage(activeLetter, newPage)
-                  : loadPage(newPage);
-              }}
-              disabled={page === 0}
-            >
-              ⬅️ Prev
-            </button>
-
-            <span>
-              Page {page + 1} / {Math.ceil(total / PAGE_SIZE)}
-            </span>
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={{ width: "100%", marginBottom: 10 }}
+            />
 
             <button
-              onClick={() => {
-                if (!hasMore) return;
-                const newPage = page + 1;
-
-                activeLetter
-                  ? loadLetterPage(activeLetter, newPage)
-                  : loadPage(newPage);
-              }}
-              disabled={!hasMore}
+              onClick={handleLogin}
+              style={{ width: "100%" }}
             >
-              Next ➡️
+              Login
             </button>
+
+            {authError && (
+              <p style={{ color: "red" }}>{authError}</p>
+            )}
           </div>
         </div>
       ) : (
+        /* ---------------- ADMIN DASHBOARD ---------------- */
+        <AdminDashboard onBack={() => {
+          setShowAdmin(false);
+          setIsAdminAuthenticated(false);
+        }} />
+      )
+    ) : (
         <div
           style={{
-            border: "1px solid #333",
-            padding: window.innerWidth < 500 ? "20px" : "40px",
-            borderRadius: "12px",
-            maxWidth: "500px",
-            width: "100%",
-            backgroundColor: darkMode ? "#222" : "#fff",
-            textAlign: "center",
+            minHeight: "100vh",
+            backgroundColor: darkMode ? "#111" : "#fff",
+            color: darkMode ? "#fff" : "#000",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            padding: 20,
+            fontFamily: "Arial",
           }}
         >
-          {!hasSearched || !currentWord ? (
-            <p style={{ color: "#aaa" }}>
-              📘 Search a word
-            </p>
-          ) : (
-            <>
-              <h2>{currentWord.word}</h2>
+          {/* 🔥 FIX TITLE VISIBILITY IN LIGHT MODE */}
+          <h1 style={{ color: darkMode ? "#fff" : "#111" }}>
+            📘 Technical Dictionary
+          </h1>
 
-              {studyMode && !revealed ? (
-                <p onClick={() => setRevealed(true)}>
-                  Click to reveal
+          {/* CONTROLS */}
+          <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search word..."
+            />
+
+            <button onClick={handleSearch}>Search</button>
+
+            <button onClick={toggleMode}>
+              {mode === "card" ? "📖 Book" : "🃏 Card"}
+            </button>
+
+            <button onClick={() => setDarkMode(!darkMode)}>
+              {darkMode ? "☀️" : "🌙"}
+            </button>
+
+            <button onClick={() => setStudyMode(!studyMode)}>
+              {studyMode ? "👁️" : "👓"}
+            </button>
+
+            <button
+              onClick={() => {
+                setShowAdmin(true);
+                setIsAdminAuthenticated(false); // always force login first
+              }}
+            >
+              {showAdmin ? "📘 App" : "🛠 Admin"}
+            </button>
+          </div>
+
+          {/* ADMIN STATUS */}
+          {showAdmin && loadingSession && <p>Loading session...</p>}
+
+         {showAdmin && !loadingSession && !session && (
+            <div
+              style={{
+                width: "100%",
+                maxWidth: 300,
+                marginTop: 20,
+                padding: 15,
+                border: "1px solid #444",
+                borderRadius: 10,
+                background: darkMode ? "#1a1a1a" : "#f5f5f5",
+              }}
+            >
+              <h3 style={{ color: darkMode ? "#fff" : "#000" }}>
+                Admin Login
+              </h3>
+
+              <input
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                style={{ width: "100%", marginBottom: 10 }}
+              />
+
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={{ width: "100%", marginBottom: 10 }}
+              />
+
+              <button onClick={handleLogin} style={{ width: "100%" }}>
+                Login
+              </button>
+
+              {authError && (
+                <p style={{ color: "red", marginTop: 10 }}>
+                  {authError}
                 </p>
-              ) : (
-                <>
-                  <p>{currentWord.definition}</p>
-                  <p><b>Example:</b> {currentWord.example}</p>
-                  <p><b>Grammar:</b> {currentWord.grammar_class}</p>
-                  <p><b>Topic:</b> {currentWord.topic}</p>
-                </>
               )}
-            </>
+            </div>
+          )}
+
+          {/* BOOK MODE */}
+          {mode === "book" ? (
+            <div style={{ width: "100%", maxWidth: 700 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                {alphabet.map((l) => (
+                  <button key={l} onClick={() => handleLetterClick(l)}>
+                    {l}
+                  </button>
+                ))}
+                <button onClick={handleAllClick}>All</button>
+              </div>
+
+              {words.map((w) => (
+                <BookItem key={w.id} word={w} darkMode={darkMode} />
+              ))}
+
+              <div style={{ marginTop: 20 }}>
+                <button disabled={page === 0}
+                  onClick={() => {
+                    const newPage = page - 1;
+                    activeLetter
+                      ? loadLetterPage(activeLetter, newPage)
+                      : loadPage(newPage);
+                  }}
+                >
+                  Prev
+                </button>
+
+                <span>
+                  Page {page + 1} / {Math.ceil(total / PAGE_SIZE)}
+                </span>
+
+                <button disabled={!hasMore}
+                  onClick={() => {
+                    const newPage = page + 1;
+                    activeLetter
+                      ? loadLetterPage(activeLetter, newPage)
+                      : loadPage(newPage);
+                  }}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* ---------------- CARD MODE (FIXED WRAP ADDED) ---------------- */
+            <div style={{ width: "100%", maxWidth: 700 }}>
+              <div
+                style={{
+                  borderBottom: "1px solid #444",
+                  padding: "12px",
+                  background: darkMode ? "#1a1a1a" : "#f7f7f7",
+                  borderRadius: "10px",
+                  marginTop: 10,
+                }}
+              >
+                {!hasSearched || !currentWord ? (
+                  <p>📘 Search a word</p>
+                ) : (
+                  <>
+                    <h3 style={{ color: darkMode ? "#fff" : "#000" }}>
+                      {currentWord.word}
+                    </h3>
+
+                    {studyMode && !revealed ? (
+                      <p onClick={() => setRevealed(true)}>
+                        Click to reveal
+                      </p>
+                    ) : (
+                      <>
+                        <p>{currentWord.definition}</p>
+                        <p><b>Example:</b> {currentWord.example}</p>
+                        <p><b>Grammar:</b> {currentWord.grammar_class}</p>
+                        <p><b>Topic:</b> {currentWord.topic}</p>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
           )}
         </div>
       )}

@@ -26,7 +26,7 @@ class Word(Base):
     example = Column(String, nullable=True)
     author = Column(String, default="Admin")
 
-    status = Column(String, default="approved")
+    status = Column(String, default="pending")
 
     created_at = Column(DateTime, default=datetime.utcnow)
 

@@ -1,7 +1,8 @@
 # app/main.py
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+import os
 
 from app.database import engine
 from app import models
@@ -71,3 +72,11 @@ def corscheck():
 @app.on_event("startup")
 async def startup_event():
     print("✅ FastAPI started and database ready")
+
+
+def verify_admin(x_admin_key: str = Header(None)):
+    print("HEADER RECEIVED:", x_admin_key)
+    print("EXPECTED:", os.getenv("ADMIN_SECRET"))
+
+    if x_admin_key != os.getenv("ADMIN_SECRET"):
+        raise HTTPException(status_code=403, detail="Unauthorized")

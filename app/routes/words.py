@@ -1,16 +1,18 @@
-# app/words.py
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from typing import List
-from datetime import datetime
+import os
 
-from app import schemas
-from app import crud
+from app import schemas, crud, models
 from app.database import SessionLocal
-from app import models
 
 router = APIRouter(prefix="/words", tags=["words"])
+
+
+# -------------------------
+# ENV
+# -------------------------
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 
 
 # -------------------------
@@ -25,36 +27,31 @@ def get_db():
 
 
 # -------------------------
-# DEBUG ROUTES
+# ADMIN AUTH (SIMPLE EMAIL CHECK)
 # -------------------------
-@router.delete("/all")
-def delete_all_words_route(db: Session = Depends(get_db)):
-    deleted_count = crud.delete_all_words(db)
-    return {"deleted": deleted_count}
+def verify_admin(x_user_email: str = Header(None)):
+    if not x_user_email:
+        raise HTTPException(status_code=401, detail="Missing email")
 
-
-@router.put("/reset-test-data")
-def reset_test_words(db: Session = Depends(get_db)):
-    count = crud.reset_test_data(db)
-    return {"reset_count": count}
+    if x_user_email != ADMIN_EMAIL:
+        raise HTTPException(status_code=403, detail="Admins only")
 
 
 # -------------------------
-# GET ALL WORDS (PAGINATED)
+# PUBLIC WORDS (ONLY APPROVED)
 # -------------------------
 @router.get("/")
 def get_all_words(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
     query = db.query(models.Word).filter(models.Word.status == "approved")
 
     total = query.count()
-
-    items = query.order_by(models.Word.word.asc()).offset(skip).limit(limit).all()
+    items = query.order_by(models.Word.id.desc()).offset(skip).limit(limit).all()
 
     return {"items": items, "total": total}
 
 
 # -------------------------
-# GET BY LETTER
+# FILTER BY LETTER (ONLY APPROVED)
 # -------------------------
 @router.get("/letter/{letter}")
 def get_words_by_letter(
@@ -64,64 +61,31 @@ def get_words_by_letter(
         raise HTTPException(status_code=400, detail="Only one letter allowed")
 
     query = db.query(models.Word).filter(
-        func.lower(models.Word.word).startswith(letter.lower())
+        models.Word.status == "approved",
+        func.lower(models.Word.word).startswith(letter.lower()),
     )
 
     total = query.count()
-
-    items = query.order_by(models.Word.word.asc()).offset(skip).limit(limit).all()
+    items = query.offset(skip).limit(limit).all()
 
     return {"items": items, "total": total}
 
 
 # -------------------------
-# GET SINGLE WORD
+# CREATE WORD (PUBLIC SUBMISSION)
 # -------------------------
-@router.get("/{word_str}")
-def get_word(word_str: str, db: Session = Depends(get_db)):
-    word = crud.get_word_by_name(db, word_str)
-
-    if not word:
-        raise HTTPException(status_code=404, detail="Word not found")
-
-    return word
-
-
-# -------------------------
-# CREATE WORD
-# -------------------------
-@router.post("/", response_model=schemas.Word)
+@router.post("/")
 def create_word(word: schemas.WordCreate, db: Session = Depends(get_db)):
     created = crud.create_word(db, word, user_id=1)
+
     if not created:
         raise HTTPException(status_code=400, detail="Word already exists")
+
     return created
 
 
 # -------------------------
-# UPDATE WORD
-# -------------------------
-@router.patch("/{word_str}", response_model=schemas.Word)
-def patch_word(word_str: str, word_data: dict, db: Session = Depends(get_db)):
-    updated = crud.update_word_fields(db, word_str, word_data)
-    if not updated:
-        raise HTTPException(status_code=404, detail="Word not found")
-    return updated
-
-
-# -------------------------
-# DELETE WORD
-# -------------------------
-@router.delete("/{word_str}")
-def delete_word(word_str: str, db: Session = Depends(get_db)):
-    deleted = crud.delete_word_by_name(db, word_str)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Word not found")
-    return {"deleted": True}
-
-
-# -------------------------
-# SUBMIT WORD
+# SUBMIT WORD (GOES TO PENDING)
 # -------------------------
 @router.post("/submit")
 def submit_word(word: schemas.WordCreate, db: Session = Depends(get_db)):
@@ -138,40 +102,87 @@ def submit_word(word: schemas.WordCreate, db: Session = Depends(get_db)):
 
 
 # -------------------------
-# GET PENDING WORDS
+# UPDATE WORD
 # -------------------------
-@router.get("/pending")
-def get_pending(db: Session = Depends(get_db)):
-    return db.query(models.Word).filter(models.Word.status == "pending").all()
+@router.patch("/{word_str}")
+def patch_word(word_str: str, word_data: dict, db: Session = Depends(get_db)):
+    updated = crud.update_word_fields(db, word_str, word_data)
+
+    if not updated:
+        raise HTTPException(status_code=404, detail="Word not found")
+
+    return updated
 
 
 # -------------------------
-# APPROVE WORD
+# DELETE WORD
 # -------------------------
-@router.patch("/{word_id}/approve")
-def approve_word(word_id: int, db: Session = Depends(get_db)):
-    word = word = db.get(models.Word, word_id)
+@router.delete("/{word_str}")
+def delete_word(word_str: str, db: Session = Depends(get_db)):
+    deleted = crud.delete_word_by_name(db, word_str)
+
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Word not found")
+
+    return {"deleted": True}
+
+
+# -------------------------
+# ADMIN DASHBOARD (FILTERED)
+# -------------------------
+@router.get("/admin")
+def get_admin_words(
+    status: str = "all",
+    skip: int = 0,
+    limit: int = 10,
+    db: Session = Depends(get_db),
+    x_user_email: str = Header(None),
+):
+    verify_admin(x_user_email)
+
+    query = db.query(models.Word)
+
+    if status != "all":
+        query = query.filter(models.Word.status == status)
+
+    total = query.count()
+
+    items = query.order_by(models.Word.id.desc()).offset(skip).limit(limit).all()
+
+    return {"items": items, "total": total}
+
+
+# -------------------------
+# UPDATE STATUS (ADMIN ONLY)
+# -------------------------
+@router.patch("/admin/{word_id}/status")
+def update_status(
+    word_id: int,
+    status: str,
+    db: Session = Depends(get_db),
+    x_user_email: str = Header(None),
+):
+    verify_admin(x_user_email)
+
+    word = db.get(models.Word, word_id)
 
     if not word:
-        raise HTTPException(404, "Word not found")
+        raise HTTPException(status_code=404, detail="Word not found")
 
-    word.status = "approved"
-    word.created_at = datetime.utcnow()
-
+    word.status = status
     db.commit()
+
     return word
 
 
 # -------------------------
-# REJECT WORD
+# GET SINGLE WORD (PUBLIC)
 # -------------------------
-@router.patch("/{word_id}/reject")
-def reject_word(word_id: int, db: Session = Depends(get_db)):
-    word = word = db.get(models.Word, word_id)
+@router.get("/{word_str}")
+def get_word(word_str: str, db: Session = Depends(get_db)):
+    word = crud.get_word_by_name(db, word_str)
 
     if not word:
-        raise HTTPException(404, "Word not found")
+        raise HTTPException(status_code=404, detail="Word not found")
 
-    word.status = "rejected"
-    db.commit()
     return word

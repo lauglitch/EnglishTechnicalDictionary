@@ -11,7 +11,11 @@ from app.services.moderation import analyze_word
 
 # ---------------- CREATE ----------------
 def create_word(db: Session, word: schemas.WordCreate, user_id: int):
-    # ---------------- CHECK DUPLICATE ----------------
+
+    analysis = analyze_word(
+        word.word, word.definition, word.example or "", word.topic or ""
+    )
+
     existing = (
         db.query(models.Word)
         .filter(func.lower(models.Word.word) == word.word.lower())
@@ -21,36 +25,27 @@ def create_word(db: Session, word: schemas.WordCreate, user_id: int):
     if existing:
         raise HTTPException(status_code=400, detail="Word already exists")
 
-    # ---------------- SAFE AI ANALYSIS ----------------
-    try:
-        analysis = analyze_word(
-            word.word, word.definition, word.example or "", word.topic or ""
-        )
-    except Exception as e:
-        print("AI ERROR:", e)
+    # MAP AI → STATUS
+    if analysis["approved_by_ai"]:
+        status = "approved"
+    elif "unsafe_content" in analysis["flags"]:
+        status = "rejected"
+    else:
+        status = "pending"
 
-        # fallback if AI fails
-        analysis = {
-            "grammar_class": "noun",
-            "score": 0.0,
-            "flags": [],
-            "approved_by_ai": False,
-        }
+    print("AI moderation:", analysis)
 
-    # ---------------- CREATE WORD ----------------
     try:
         db_word = models.Word(
             word=word.word,
             definition=word.definition,
             example=word.example,
             topic=word.topic,
-            # ⚠️ IMPORTANT: your model uses "author", NOT "author_id"
-            author="Admin",
-            grammar_class=analysis.get("grammar_class", "noun"),
-            status="pending",
-            # ⚠️ Your model DOES NOT have ai_score, ai_flags, etc.
-            # so DO NOT include them
-            created_at=None,
+            author_id=user_id,
+            grammar_class=word.grammar_class,
+            # 👇 ONLY FIELD YOU USE
+            status=status,
+            created_at=datetime.utcnow(),
         )
 
         db.add(db_word)
@@ -61,8 +56,7 @@ def create_word(db: Session, word: schemas.WordCreate, user_id: int):
 
     except Exception as e:
         db.rollback()
-        print("DB ERROR:", e)
-        raise HTTPException(status_code=500, detail="Database error")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ---------------- GET BY NAME ----------------
