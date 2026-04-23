@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build --logLevel info",
+    "build": "vite build --logLevel verbose",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -28,5 +28,8 @@
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.2",
     "vite": "^8.0.1"
+  },
+  "engines": {
+    "node": "18.x"
   }
 }
