@@ -35,7 +35,7 @@ function AdminDashboard({ onBack }) {
 
   /* ---------------- FETCH ---------------- */
   useEffect(() => {
-    if (!session?.user?.email) return;
+    if (!session?.user?.email) return; // 🔥 FIX 1 (critical guard)
 
     const controller = new AbortController();
 
@@ -49,23 +49,22 @@ function AdminDashboard({ onBack }) {
       }
 
       try {
+        const email = session.user.email; // 🔥 FIX 2 (safe access)
+
         const res = await axios.get(url, {
           signal: controller.signal,
           headers: {
-            "x-user-email": session.user.email,
+            "x-user-email": email,
           },
         });
 
         setWords(res.data.items);
         setTotal(res.data.total);
-
-        // IMPORTANT: only sync UI state, NOT query state
         setPage(query.page);
         setFilter(query.filter);
-
       } catch (err) {
         if (err.name !== "CanceledError") {
-          console.error(err);
+          console.error("ADMIN FETCH ERROR:", err);
         }
       }
     };
@@ -85,11 +84,14 @@ function AdminDashboard({ onBack }) {
 
   /* ---------------- ACTIONS ---------------- */
   const updateStatus = async (id, status) => {
+    const email = session?.user?.email;
+    if (!email) return; // 🔥 FIX 3
+
     await axios.patch(
       `${API}/admin/${id}/status?status=${status}`,
       null,
       {
-        headers: { "x-user-email": session?.user?.email },
+        headers: { "x-user-email": email },
       }
     );
 
@@ -97,10 +99,13 @@ function AdminDashboard({ onBack }) {
   };
 
   const deleteWord = async (word) => {
+    const email = session?.user?.email;
+    if (!email) return; // 🔥 FIX 4
+
     if (!window.confirm("Delete this word?")) return;
 
     await axios.delete(`${API}/${word}`, {
-      headers: { "x-user-email": session?.user?.email },
+      headers: { "x-user-email": email },
     });
 
     reload(page, filter);
@@ -109,6 +114,7 @@ function AdminDashboard({ onBack }) {
   /* ---------------- PAGINATION ---------------- */
   const hasMore = (page + 1) * PAGE_SIZE < total;
 
+  /* ---------------- UI ---------------- */
   return (
     <div style={{ padding: 20 }}>
       <h1>Admin Dashboard</h1>
@@ -164,10 +170,7 @@ function AdminDashboard({ onBack }) {
           Page {page + 1} / {Math.ceil(total / PAGE_SIZE)}
         </span>
 
-        <button
-          disabled={!hasMore}
-          onClick={() => reload(page + 1, filter)}
-        >
+        <button disabled={!hasMore} onClick={() => reload(page + 1, filter)}>
           Next
         </button>
       </div>
