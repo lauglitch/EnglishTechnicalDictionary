@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { supabase } from "../lib/supabase";
 
@@ -12,8 +12,11 @@ function AdminDashboard({ onBack }) {
   const [filter, setFilter] = useState("all");
   const [session, setSession] = useState(null);
 
-  // 🔥 stable function reference (NO RE-RENDER TRIGGERS)
-  const fetchWordsRef = useRef(null);
+  // 🔥 single source of truth for requests
+  const [query, setQuery] = useState({
+    page: 0,
+    filter: "all",
+  });
 
   /* ---------------- SESSION ---------------- */
   useEffect(() => {
@@ -31,65 +34,80 @@ function AdminDashboard({ onBack }) {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  /* ---------------- AUTH ---------------- */
-  const getAuthHeader = () => {
-    const email = session?.user?.email;
-    return email ? { "x-user-email": email } : {};
-  };
-
-  /* ---------------- FETCH FUNCTION ---------------- */
+  /* ---------------- FETCH ---------------- */
   useEffect(() => {
-    fetchWordsRef.current = async (pageNumber, statusFilter) => {
-      const skip = pageNumber * PAGE_SIZE;
+    if (!session) return;
+
+    const controller = new AbortController();
+
+    const fetchWords = async () => {
+      const skip = query.page * PAGE_SIZE;
 
       let url = `${API}/admin?skip=${skip}&limit=${PAGE_SIZE}`;
 
-      if (statusFilter !== "all") {
-        url += `&status=${statusFilter}`;
+      if (query.filter !== "all") {
+        url += `&status=${query.filter}`;
       }
 
       try {
         const res = await axios.get(url, {
-          headers: getAuthHeader(),
+          signal: controller.signal,
+          headers: {
+            "x-user-email": session.user.email,
+          },
         });
 
         setWords(res.data.items);
         setTotal(res.data.total);
-        setPage(pageNumber);
+        setPage(query.page);
+        setFilter(query.filter);
       } catch (err) {
-        console.error(err);
+        if (err.name !== "CanceledError") {
+          console.error(err);
+        }
       }
     };
-  });
 
-  /* ---------------- INITIAL LOAD ---------------- */
-  useEffect(() => {
-    if (!session) return;
+    fetchWords();
 
-    fetchWordsRef.current(0, filter);
-  }, [session, filter]);
+    return () => controller.abort();
+  }, [session, query]);
+
+  /* ---------------- ACTION TRIGGERS ---------------- */
+  const reload = (newPage = page, newFilter = filter) => {
+    setQuery({
+      page: newPage,
+      filter: newFilter,
+    });
+  };
 
   /* ---------------- ACTIONS ---------------- */
   const updateStatus = async (id, status) => {
     await axios.patch(
       `${API}/admin/${id}/status?status=${status}`,
       null,
-      { headers: getAuthHeader() }
+      {
+        headers: { "x-user-email": session?.user?.email },
+      }
     );
 
-    fetchWordsRef.current(page, filter);
+    reload(page, filter);
   };
 
   const deleteWord = async (word) => {
     if (!window.confirm("Delete this word?")) return;
 
     await axios.delete(`${API}/${word}`, {
-      headers: getAuthHeader(),
+      headers: { "x-user-email": session?.user?.email },
     });
 
-    fetchWordsRef.current(page, filter);
+    reload(page, filter);
   };
 
+  /* ---------------- PAGINATION ---------------- */
+  const hasMore = (page + 1) * PAGE_SIZE < total;
+
+  /* ---------------- UI ---------------- */
   return (
     <div style={{ padding: 20 }}>
       <h1>Admin Dashboard</h1>
@@ -103,9 +121,10 @@ function AdminDashboard({ onBack }) {
         {["all", "pending", "approved", "rejected"].map((f) => (
           <button
             key={f}
-            onClick={() => {
-              setFilter(f);
-              fetchWordsRef.current(0, f);
+            onClick={() => reload(0, f)}
+            style={{
+              marginRight: 5,
+              fontWeight: filter === f ? "bold" : "normal",
             }}
           >
             {f}
@@ -134,8 +153,22 @@ function AdminDashboard({ onBack }) {
         </div>
       ))}
 
+      {/* PAGINATION */}
       <div style={{ marginTop: 20 }}>
-        Page {page + 1} / {Math.ceil(total / PAGE_SIZE)}
+        <button disabled={page === 0} onClick={() => reload(page - 1, filter)}>
+          Prev
+        </button>
+
+        <span style={{ margin: "0 10px" }}>
+          Page {page + 1} / {Math.ceil(total / PAGE_SIZE)}
+        </span>
+
+        <button
+          disabled={!hasMore}
+          onClick={() => reload(page + 1, filter)}
+        >
+          Next
+        </button>
       </div>
     </div>
   );

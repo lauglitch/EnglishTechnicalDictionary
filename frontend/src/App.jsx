@@ -63,50 +63,58 @@ function App() {
   const [showAdmin, setShowAdmin] = useState(false);
 
   const [session, setSession] = useState(null);
-  const [loadingSession, setLoadingSession] = useState(true);
+  const [setLoadingSession] = useState(true);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState(null);
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
-  /* ---------------- SESSION ---------------- */
+  
+  /* ---------------- LOGIN ---------------- */
   const handleLogin = async () => {
-  setAuthError(null);
+    setAuthError(null);
 
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-  if (error) {
-    setAuthError(error.message);
-    return;
-  }
+    if (error) {
+      setAuthError(error.message);
+      return;
+    }
 
-  if (data.session) {
-    setIsAdminAuthenticated(true);
-  }
-};
+    setSession(data.session);
+  };
 
+  /* ---------------- SESSION ---------------- */
   useEffect(() => {
-    const getSession = async () => {
+    let mounted = true;
+
+    const initAuth = async () => {
       const { data } = await supabase.auth.getSession();
-      setSession(data.session);
-      setLoadingSession(false);
-    };
 
-    getSession();
-
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
-        setSession(newSession);
+      if (mounted) {
+        setSession(data.session);
         setLoadingSession(false);
       }
-    );
+    };
 
-    return () => listener.subscription.unsubscribe();
+    initAuth();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setLoadingSession(false);
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   /* ---------------- STYLE ---------------- */
@@ -131,7 +139,7 @@ function App() {
     }
   };
 
-  /* ---------------- LOAD PAGE ---------------- */
+  /* ---------------- PAGINATION ---------------- */
   const loadPage = async (pageNumber = 0) => {
     const skip = pageNumber * PAGE_SIZE;
 
@@ -143,7 +151,6 @@ function App() {
     setActiveLetter(null);
   };
 
-  /* ---------------- LOAD LETTER ---------------- */
   const loadLetterPage = async (letter, pageNumber = 0) => {
     const skip = pageNumber * PAGE_SIZE;
 
@@ -166,11 +173,13 @@ function App() {
     loadPage(0);
   };
 
-  /* ---------------- MODE SWITCH (FIXED START A) ---------------- */
+  const hasMore = (page + 1) * PAGE_SIZE < total;
+
+  /* ---------------- MODE SWITCH ---------------- */
   const toggleMode = async () => {
     if (mode === "card") {
       await loadPage(0);
-      setActiveLetter("A");   // 🔥 FORCE START FROM A
+      setActiveLetter("A");
       setPage(0);
       setMode("book");
       loadLetterPage("A", 0);
@@ -182,70 +191,67 @@ function App() {
     }
   };
 
-  const hasMore = (page + 1) * PAGE_SIZE < total;
-
   /* ---------------- UI ---------------- */
   return (
     <div>
       {showAdmin ? (
-      !isAdminAuthenticated ? (
-        /* ---------------- LOGIN PAGE ---------------- */
-        <div
-          style={{
-            minHeight: "100vh",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: darkMode ? "#111" : "#fff",
-          }}
-        >
+        !session ? (
+          /* ---------------- LOGIN PAGE ---------------- */
           <div
             style={{
-              width: 320,
-              padding: 20,
-              borderRadius: 10,
-              background: darkMode ? "#1a1a1a" : "#f5f5f5",
+              minHeight: "100vh",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: darkMode ? "#111" : "#fff",
             }}
           >
-            <h2 style={{ color: darkMode ? "#fff" : "#000" }}>
-              Admin Login
-            </h2>
-
-            <input
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={{ width: "100%", marginBottom: 10 }}
-            />
-
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={{ width: "100%", marginBottom: 10 }}
-            />
-
-            <button
-              onClick={handleLogin}
-              style={{ width: "100%" }}
+            <div
+              style={{
+                width: 320,
+                padding: 20,
+                borderRadius: 10,
+                background: darkMode ? "#1a1a1a" : "#f5f5f5",
+              }}
             >
-              Login
-            </button>
+              <h2 style={{ color: darkMode ? "#fff" : "#000" }}>
+                Admin Login
+              </h2>
 
-            {authError && (
-              <p style={{ color: "red" }}>{authError}</p>
-            )}
+              <input
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                style={{ width: "100%", marginBottom: 10 }}
+              />
+
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={{ width: "100%", marginBottom: 10 }}
+              />
+
+              <button onClick={handleLogin} style={{ width: "100%" }}>
+                Login
+              </button>
+
+              {authError && (
+                <p style={{ color: "red" }}>{authError}</p>
+              )}
+            </div>
           </div>
-        </div>
+        ) : (
+          /* ---------------- ADMIN ---------------- */
+          <AdminDashboard
+            onBack={() => {
+              setShowAdmin(false);
+            }}
+          />
+        )
       ) : (
-        /* ---------------- ADMIN DASHBOARD ---------------- */
-        <AdminDashboard onBack={() => {
-          setShowAdmin(false);
-          setIsAdminAuthenticated(false);
-        }} />
-      )
-    ) : (
+        /* ---------------- MAIN APP ---------------- */
         <div
           style={{
             minHeight: "100vh",
@@ -258,7 +264,6 @@ function App() {
             fontFamily: "Arial",
           }}
         >
-          {/* 🔥 FIX TITLE VISIBILITY IN LIGHT MODE */}
           <h1 style={{ color: darkMode ? "#fff" : "#111" }}>
             📘 Technical Dictionary
           </h1>
@@ -285,61 +290,10 @@ function App() {
               {studyMode ? "👁️" : "👓"}
             </button>
 
-            <button
-              onClick={() => {
-                setShowAdmin(true);
-                setIsAdminAuthenticated(false); // always force login first
-              }}
-            >
-              {showAdmin ? "📘 App" : "🛠 Admin"}
+            <button onClick={() => setShowAdmin(true)}>
+              🛠 Admin
             </button>
           </div>
-
-          {/* ADMIN STATUS */}
-          {showAdmin && loadingSession && <p>Loading session...</p>}
-
-         {showAdmin && !loadingSession && !session && (
-            <div
-              style={{
-                width: "100%",
-                maxWidth: 300,
-                marginTop: 20,
-                padding: 15,
-                border: "1px solid #444",
-                borderRadius: 10,
-                background: darkMode ? "#1a1a1a" : "#f5f5f5",
-              }}
-            >
-              <h3 style={{ color: darkMode ? "#fff" : "#000" }}>
-                Admin Login
-              </h3>
-
-              <input
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={{ width: "100%", marginBottom: 10 }}
-              />
-
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                style={{ width: "100%", marginBottom: 10 }}
-              />
-
-              <button onClick={handleLogin} style={{ width: "100%" }}>
-                Login
-              </button>
-
-              {authError && (
-                <p style={{ color: "red", marginTop: 10 }}>
-                  {authError}
-                </p>
-              )}
-            </div>
-          )}
 
           {/* BOOK MODE */}
           {mode === "book" ? (
@@ -357,8 +311,10 @@ function App() {
                 <BookItem key={w.id} word={w} darkMode={darkMode} />
               ))}
 
+              {/* ---------------- PAGINATION (RESTORED) ---------------- */}
               <div style={{ marginTop: 20 }}>
-                <button disabled={page === 0}
+                <button
+                  disabled={page === 0}
                   onClick={() => {
                     const newPage = page - 1;
                     activeLetter
@@ -373,7 +329,8 @@ function App() {
                   Page {page + 1} / {Math.ceil(total / PAGE_SIZE)}
                 </span>
 
-                <button disabled={!hasMore}
+                <button
+                  disabled={!hasMore}
                   onClick={() => {
                     const newPage = page + 1;
                     activeLetter
@@ -386,7 +343,7 @@ function App() {
               </div>
             </div>
           ) : (
-            /* ---------------- CARD MODE (FIXED WRAP ADDED) ---------------- */
+            /* CARD MODE */
             <div style={{ width: "100%", maxWidth: 700 }}>
               <div
                 style={{
