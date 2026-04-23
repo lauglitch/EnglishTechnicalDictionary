@@ -35,7 +35,7 @@ function AdminDashboard({ onBack }) {
 
   /* ---------------- FETCH ---------------- */
   useEffect(() => {
-    if (!session?.user?.email) return; // 🔥 FIX 1 (critical guard)
+    if (!session?.user?.email) return; // 🔥 FIX 1: prevent 403 + undefined header
 
     const controller = new AbortController();
 
@@ -49,7 +49,9 @@ function AdminDashboard({ onBack }) {
       }
 
       try {
-        const email = session.user.email; // 🔥 FIX 2 (safe access)
+        const email = session.user.email;
+
+        console.log("ADMIN EMAIL USED:", email); // 🔥 DEBUG ONLY
 
         const res = await axios.get(url, {
           signal: controller.signal,
@@ -85,7 +87,7 @@ function AdminDashboard({ onBack }) {
   /* ---------------- ACTIONS ---------------- */
   const updateStatus = async (id, status) => {
     const email = session?.user?.email;
-    if (!email) return; // 🔥 FIX 3
+    if (!email) return; // 🔥 FIX 2
 
     await axios.patch(
       `${API}/admin/${id}/status?status=${status}`,
@@ -100,7 +102,7 @@ function AdminDashboard({ onBack }) {
 
   const deleteWord = async (word) => {
     const email = session?.user?.email;
-    if (!email) return; // 🔥 FIX 4
+    if (!email) return; // 🔥 FIX 3
 
     if (!window.confirm("Delete this word?")) return;
 
