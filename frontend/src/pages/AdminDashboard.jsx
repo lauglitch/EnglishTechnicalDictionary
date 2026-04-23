@@ -12,7 +12,6 @@ function AdminDashboard({ onBack }) {
   const [filter, setFilter] = useState("all");
   const [session, setSession] = useState(null);
 
-  // 🔥 single source of truth for requests
   const [query, setQuery] = useState({
     page: 0,
     filter: "all",
@@ -36,7 +35,7 @@ function AdminDashboard({ onBack }) {
 
   /* ---------------- FETCH ---------------- */
   useEffect(() => {
-    if (!session) return;
+    if (!session?.user?.email) return;
 
     const controller = new AbortController();
 
@@ -59,8 +58,11 @@ function AdminDashboard({ onBack }) {
 
         setWords(res.data.items);
         setTotal(res.data.total);
+
+        // IMPORTANT: only sync UI state, NOT query state
         setPage(query.page);
         setFilter(query.filter);
+
       } catch (err) {
         if (err.name !== "CanceledError") {
           console.error(err);
@@ -107,7 +109,6 @@ function AdminDashboard({ onBack }) {
   /* ---------------- PAGINATION ---------------- */
   const hasMore = (page + 1) * PAGE_SIZE < total;
 
-  /* ---------------- UI ---------------- */
   return (
     <div style={{ padding: 20 }}>
       <h1>Admin Dashboard</h1>
