@@ -4,7 +4,7 @@ import { supabase } from "./lib/supabase";
 
 import AdminDashboard from "./pages/AdminDashboard";
 
-const API = `${import.meta.env.VITE_API_URL}`;
+const API = import.meta.env.VITE_API_URL;
 const PAGE_SIZE = 3;
 
 /* ---------------- BOOK ITEM ---------------- */

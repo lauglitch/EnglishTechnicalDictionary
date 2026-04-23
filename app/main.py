@@ -33,7 +33,7 @@ app.add_middleware(
         "https://english-technical-dictionary.vercel.app",
         "https://english-technical-dictionary-72p5ds41i-lauglitchs-projects.vercel.app",
     ],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { supabase } from "../lib/supabase";
 
-const API = `${import.meta.env.VITE_API_URL}`;
+const API = import.meta.env.VITE_API_URL;
 const PAGE_SIZE = 10;
 
 function AdminDashboard({ onBack }) {
