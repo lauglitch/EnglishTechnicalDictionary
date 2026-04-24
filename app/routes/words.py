@@ -9,10 +9,7 @@ from app.database import SessionLocal
 router = APIRouter(prefix="/words", tags=["words"])
 
 
-# -------------------------
-# ENV
-# -------------------------
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "").strip().lower()
 
 
 # -------------------------
@@ -27,7 +24,7 @@ def get_db():
 
 
 # -------------------------
-# ADMIN AUTH (SIMPLE EMAIL CHECK)
+# ADMIN AUTH
 # -------------------------
 def verify_admin(x_user_email: str = Header(None)):
     print("HEADER RECEIVED:", x_user_email)
@@ -35,12 +32,12 @@ def verify_admin(x_user_email: str = Header(None)):
     if not x_user_email:
         raise HTTPException(status_code=401, detail="Missing email")
 
-    if x_user_email.lower() != ADMIN_EMAIL.lower():
+    if x_user_email.strip().lower() != ADMIN_EMAIL:
         raise HTTPException(status_code=403, detail="Admins only")
 
 
 # -------------------------
-# PUBLIC WORDS (ONLY APPROVED)
+# PUBLIC WORDS
 # -------------------------
 @router.get("/")
 def get_all_words(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
@@ -53,7 +50,7 @@ def get_all_words(skip: int = 0, limit: int = 10, db: Session = Depends(get_db))
 
 
 # -------------------------
-# FILTER BY LETTER (ONLY APPROVED)
+# LETTER FILTER
 # -------------------------
 @router.get("/letter/{letter}")
 def get_words_by_letter(
@@ -74,7 +71,7 @@ def get_words_by_letter(
 
 
 # -------------------------
-# CREATE WORD (PUBLIC SUBMISSION)
+# CREATE WORD
 # -------------------------
 @router.post("/")
 def create_word(word: schemas.WordCreate, db: Session = Depends(get_db)):
@@ -87,7 +84,7 @@ def create_word(word: schemas.WordCreate, db: Session = Depends(get_db)):
 
 
 # -------------------------
-# SUBMIT WORD (GOES TO PENDING)
+# SUBMIT WORD
 # -------------------------
 @router.post("/submit")
 def submit_word(word: schemas.WordCreate, db: Session = Depends(get_db)):
@@ -130,7 +127,7 @@ def delete_word(word_str: str, db: Session = Depends(get_db)):
 
 
 # -------------------------
-# ADMIN DASHBOARD (FILTERED)
+# ADMIN DASHBOARD
 # -------------------------
 @router.get("/admin")
 def get_admin_words(
@@ -148,14 +145,13 @@ def get_admin_words(
         query = query.filter(models.Word.status == status)
 
     total = query.count()
-
     items = query.order_by(models.Word.id.desc()).offset(skip).limit(limit).all()
 
     return {"items": items, "total": total}
 
 
 # -------------------------
-# UPDATE STATUS (ADMIN ONLY)
+# UPDATE STATUS
 # -------------------------
 @router.patch("/admin/{word_id}/status")
 def update_status(
@@ -178,7 +174,7 @@ def update_status(
 
 
 # -------------------------
-# GET SINGLE WORD (PUBLIC)
+# GET SINGLE WORD
 # -------------------------
 @router.get("/{word_str}")
 def get_word(word_str: str, db: Session = Depends(get_db)):

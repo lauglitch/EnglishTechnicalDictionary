@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../api/api";
 import { supabase } from "../lib/supabase";
 
-const API = import.meta.env.VITE_API_URL;
 const PAGE_SIZE = 10;
 
 function AdminDashboard({ onBack }) {
@@ -11,11 +10,6 @@ function AdminDashboard({ onBack }) {
   const [total, setTotal] = useState(0);
   const [filter, setFilter] = useState("all");
   const [session, setSession] = useState(null);
-
-  const [query, setQuery] = useState({
-    page: 0,
-    filter: "all",
-  });
 
   /* ---------------- SESSION ---------------- */
   useEffect(() => {
@@ -28,15 +22,15 @@ function AdminDashboard({ onBack }) {
 
     init();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
-        if (mounted) setSession(newSession);
-      }
-    );
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (mounted) setSession(newSession);
+    });
 
     return () => {
       mounted = false;
-      listener.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
@@ -47,32 +41,23 @@ function AdminDashboard({ onBack }) {
     const controller = new AbortController();
 
     const fetchWords = async () => {
-      const skip = query.page * PAGE_SIZE;
+      const skip = page * PAGE_SIZE;
 
-      let url = `${API}/admin?skip=${skip}&limit=${PAGE_SIZE}`;
+      let url = `/words/admin?skip=${skip}&limit=${PAGE_SIZE}`;
 
-      if (query.filter !== "all") {
-        url += `&status=${query.filter}`;
+      if (filter !== "all") {
+        url += `&status=${filter}`;
       }
 
       try {
-        const email = session.user.email;
+        console.log("ADMIN EMAIL USED:", session.user.email);
 
-        console.log("ADMIN EMAIL USED:", email);
-
-        const res = await axios.get(url, {
+        const res = await api.get(url, {
           signal: controller.signal,
-          headers: {
-            "x-user-email": email,
-            "Content-Type": "application/json",
-          },
-          withCredentials: false,
         });
 
         setWords(res.data.items);
         setTotal(res.data.total);
-        setPage(query.page);
-        setFilter(query.filter);
       } catch (err) {
         if (err.name !== "CanceledError") {
           console.error("ADMIN FETCH ERROR:", err);
@@ -83,43 +68,37 @@ function AdminDashboard({ onBack }) {
     fetchWords();
 
     return () => controller.abort();
-  }, [session, query]);
+  }, [session, page, filter]);
 
-  /* ---------------- ACTION TRIGGERS ---------------- */
-  const reload = (newPage = page, newFilter = filter) => {
-    setQuery({
-      page: newPage,
-      filter: newFilter,
-    });
+  /* ---------------- RELOAD ---------------- */
+  const reload = (newPage = 0, newFilter = filter) => {
+    setPage(newPage);
+    setFilter(newFilter);
   };
 
   /* ---------------- ACTIONS ---------------- */
   const updateStatus = async (id, status) => {
-    const email = session?.user?.email;
-    if (!email) return;
+    if (!session?.user?.email) return;
 
-    await axios.patch(
-      `${API}/admin/${id}/status?status=${status}`,
-      null,
-      {
-        headers: { "x-user-email": email },
-      }
-    );
-
-    reload(page, filter);
+    try {
+      await api.patch(`/words/admin/${id}/status?status=${status}`);
+      reload(page, filter);
+    } catch (err) {
+      console.error("UPDATE STATUS ERROR:", err);
+    }
   };
 
   const deleteWord = async (word) => {
-    const email = session?.user?.email;
-    if (!email) return;
+    if (!session?.user?.email) return;
 
     if (!window.confirm("Delete this word?")) return;
 
-    await axios.delete(`${API}/${word}`, {
-      headers: { "x-user-email": email },
-    });
-
-    reload(page, filter);
+    try {
+      await api.delete(`/words/${word}`);
+      reload(page, filter);
+    } catch (err) {
+      console.error("DELETE ERROR:", err);
+    }
   };
 
   /* ---------------- PAGINATION ---------------- */
@@ -152,7 +131,10 @@ function AdminDashboard({ onBack }) {
 
       {/* WORD LIST */}
       {words.map((w) => (
-        <div key={w.id} style={{ borderBottom: "1px solid #ccc", padding: 10 }}>
+        <div
+          key={w.id}
+          style={{ borderBottom: "1px solid #ccc", padding: 10 }}
+        >
           <h3>{w.word}</h3>
           <p>{w.definition}</p>
           <p>Status: {w.status}</p>
@@ -173,7 +155,10 @@ function AdminDashboard({ onBack }) {
 
       {/* PAGINATION */}
       <div style={{ marginTop: 20 }}>
-        <button disabled={page === 0} onClick={() => reload(page - 1, filter)}>
+        <button
+          disabled={page === 0}
+          onClick={() => reload(page - 1, filter)}
+        >
           Prev
         </button>
 
@@ -181,7 +166,10 @@ function AdminDashboard({ onBack }) {
           Page {page + 1} / {Math.ceil(total / PAGE_SIZE)}
         </span>
 
-        <button disabled={!hasMore} onClick={() => reload(page + 1, filter)}>
+        <button
+          disabled={!hasMore}
+          onClick={() => reload(page + 1, filter)}
+        >
           Next
         </button>
       </div>

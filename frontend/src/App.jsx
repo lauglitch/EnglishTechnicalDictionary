@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "./api/api";
 import { supabase } from "./lib/supabase";
 
 import AdminDashboard from "./pages/AdminDashboard";
 
-const API = import.meta.env.VITE_API_URL;
 const PAGE_SIZE = 3;
 
 /* ---------------- BOOK ITEM ---------------- */
@@ -21,9 +20,7 @@ function BookItem({ word, darkMode }) {
         marginBottom: "10px",
       }}
     >
-      <h3 style={{ color: darkMode ? "#fff" : "#000" }}>
-        {word.word}
-      </h3>
+      <h3 style={{ color: darkMode ? "#fff" : "#000" }}>{word.word}</h3>
 
       <p>{word.definition}</p>
 
@@ -63,7 +60,7 @@ function App() {
   const [showAdmin, setShowAdmin] = useState(false);
 
   const [session, setSession] = useState(null);
-  const [setLoadingSession] = useState(true);
+  const [, setLoadingSession] = useState(true);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -71,7 +68,6 @@ function App() {
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
-  
   /* ---------------- LOGIN ---------------- */
   const handleLogin = async () => {
     setAuthError(null);
@@ -128,7 +124,7 @@ function App() {
     if (!search) return;
 
     try {
-      const res = await axios.get(`${API}/${search.toLowerCase()}`);
+      const res = await api.get(`/${search.toLowerCase()}`);
 
       setCurrentWord(res.data);
       setHasSearched(true);
@@ -143,7 +139,7 @@ function App() {
   const loadPage = async (pageNumber = 0) => {
     const skip = pageNumber * PAGE_SIZE;
 
-    const res = await axios.get(`${API}?skip=${skip}&limit=${PAGE_SIZE}`);
+    const res = await api.get(`/?skip=${skip}&limit=${PAGE_SIZE}`);
 
     setWords(res.data.items);
     setTotal(res.data.total);
@@ -154,8 +150,8 @@ function App() {
   const loadLetterPage = async (letter, pageNumber = 0) => {
     const skip = pageNumber * PAGE_SIZE;
 
-    const res = await axios.get(
-      `${API}/letter/${letter.toLowerCase()}?skip=${skip}&limit=${PAGE_SIZE}`
+    const res = await api.get(
+      `/letter/${letter.toLowerCase()}?skip=${skip}&limit=${PAGE_SIZE}`
     );
 
     setWords(res.data.items);
@@ -196,7 +192,7 @@ function App() {
     <div>
       {showAdmin ? (
         !session ? (
-          /* ---------------- LOGIN PAGE ---------------- */
+          /* LOGIN */
           <div
             style={{
               minHeight: "100vh",
@@ -214,9 +210,7 @@ function App() {
                 background: darkMode ? "#1a1a1a" : "#f5f5f5",
               }}
             >
-              <h2 style={{ color: darkMode ? "#fff" : "#000" }}>
-                Admin Login
-              </h2>
+              <h2>Admin Login</h2>
 
               <input
                 placeholder="Email"
@@ -237,21 +231,14 @@ function App() {
                 Login
               </button>
 
-              {authError && (
-                <p style={{ color: "red" }}>{authError}</p>
-              )}
+              {authError && <p style={{ color: "red" }}>{authError}</p>}
             </div>
           </div>
         ) : (
-          /* ---------------- ADMIN ---------------- */
-          <AdminDashboard
-            onBack={() => {
-              setShowAdmin(false);
-            }}
-          />
+          <AdminDashboard onBack={() => setShowAdmin(false)} />
         )
       ) : (
-        /* ---------------- MAIN APP ---------------- */
+        /* MAIN APP */
         <div
           style={{
             minHeight: "100vh",
@@ -264,9 +251,7 @@ function App() {
             fontFamily: "Arial",
           }}
         >
-          <h1 style={{ color: darkMode ? "#fff" : "#111" }}>
-            📘 Technical Dictionary
-          </h1>
+          <h1>📘 Technical Dictionary</h1>
 
           {/* CONTROLS */}
           <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
@@ -311,7 +296,6 @@ function App() {
                 <BookItem key={w.id} word={w} darkMode={darkMode} />
               ))}
 
-              {/* ---------------- PAGINATION (RESTORED) ---------------- */}
               <div style={{ marginTop: 20 }}>
                 <button
                   disabled={page === 0}
@@ -358,9 +342,7 @@ function App() {
                   <p>📘 Search a word</p>
                 ) : (
                   <>
-                    <h3 style={{ color: darkMode ? "#fff" : "#000" }}>
-                      {currentWord.word}
-                    </h3>
+                    <h3>{currentWord.word}</h3>
 
                     {studyMode && !revealed ? (
                       <p onClick={() => setRevealed(true)}>

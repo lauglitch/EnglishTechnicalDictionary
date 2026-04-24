@@ -17,10 +17,16 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI(title="English Technical Dictionary")
 
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # keep for now (debug)
-    allow_credentials=False,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "https://english-technical-dictionary.vercel.app",
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -37,7 +43,7 @@ async def debug_middleware(request, call_next):
     return response
 
 
-# ✅ Include routers ONLY ONCE
+# Include routers ONLY ONCE
 app.include_router(words.router)
 app.include_router(users.router)
 
