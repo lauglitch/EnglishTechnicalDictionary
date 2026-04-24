@@ -35,7 +35,7 @@ def verify_admin(x_user_email: str = Header(None)):
     if not x_user_email:
         raise HTTPException(status_code=401, detail="Missing email")
 
-    if x_user_email != ADMIN_EMAIL:
+    if x_user_email.lower() != ADMIN_EMAIL.lower():
         raise HTTPException(status_code=403, detail="Admins only")
 
 
