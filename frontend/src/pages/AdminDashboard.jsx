@@ -19,23 +19,30 @@ function AdminDashboard({ onBack }) {
 
   /* ---------------- SESSION ---------------- */
   useEffect(() => {
+    let mounted = true;
+
     const init = async () => {
       const { data } = await supabase.auth.getSession();
-      setSession(data.session);
+      if (mounted) setSession(data.session);
     };
 
     init();
 
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => setSession(newSession)
+      (_event, newSession) => {
+        if (mounted) setSession(newSession);
+      }
     );
 
-    return () => listener.subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   /* ---------------- FETCH ---------------- */
   useEffect(() => {
-    if (!session?.user?.email) return; // 🔥 FIX 1: prevent 403 + undefined header
+    if (!session?.user?.email) return;
 
     const controller = new AbortController();
 
@@ -51,7 +58,7 @@ function AdminDashboard({ onBack }) {
       try {
         const email = session.user.email;
 
-        console.log("ADMIN EMAIL USED:", email); // 🔥 DEBUG ONLY
+        console.log("ADMIN EMAIL USED:", email);
 
         const res = await axios.get(url, {
           signal: controller.signal,
@@ -87,7 +94,7 @@ function AdminDashboard({ onBack }) {
   /* ---------------- ACTIONS ---------------- */
   const updateStatus = async (id, status) => {
     const email = session?.user?.email;
-    if (!email) return; // 🔥 FIX 2
+    if (!email) return;
 
     await axios.patch(
       `${API}/admin/${id}/status?status=${status}`,
@@ -102,7 +109,7 @@ function AdminDashboard({ onBack }) {
 
   const deleteWord = async (word) => {
     const email = session?.user?.email;
-    if (!email) return; // 🔥 FIX 3
+    if (!email) return;
 
     if (!window.confirm("Delete this word?")) return;
 
