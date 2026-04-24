@@ -27,15 +27,10 @@ async def debug_headers(request, call_next):
 # CORS configuration (for Vercel frontend)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "https://english-technical-dictionary.vercel.app",
-        "https://english-technical-dictionary-72p5ds41i-lauglitchs-projects.vercel.app",
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],  # TEMPORARY DEBUG
+    allow_credentials=False,
     allow_methods=["*"],
-    allow_headers=["x-user-email", "content-type", "authorization"],
+    allow_headers=["*"],
 )
 
 
