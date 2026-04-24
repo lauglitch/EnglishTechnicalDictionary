@@ -17,17 +17,9 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI(title="English Technical Dictionary")
 
 
-@app.middleware("http")
-async def debug_headers(request, call_next):
-    response = await call_next(request)
-    response.headers["X-Debug-CORS"] = "active"
-    return response
-
-
-# CORS configuration (for Vercel frontend)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # TEMPORARY DEBUG
+    allow_origins=["*"],  # keep for now (debug)
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -36,12 +28,16 @@ app.add_middleware(
 
 @app.middleware("http")
 async def debug_middleware(request, call_next):
+    print("➡️ REQUEST PATH:", request.url.path)
+    print("➡️ HEADERS:", dict(request.headers))
+
     response = await call_next(request)
-    response.headers["X-Debug"] = "CORS_TEST"
+
+    response.headers["X-Debug"] = "CORS_OK"
     return response
 
 
-# Include routers
+# ✅ Include routers ONLY ONCE
 app.include_router(words.router)
 app.include_router(users.router)
 
@@ -69,9 +65,12 @@ async def startup_event():
     print("✅ FastAPI started and database ready")
 
 
-def verify_admin(x_admin_key: str = Header(None)):
-    print("HEADER RECEIVED:", x_admin_key)
-    print("EXPECTED:", os.getenv("ADMIN_SECRET"))
+def verify_admin(x_user_email: str = Header(None)):
+    print("HEADER RECEIVED:", x_user_email)
+    print("EXPECTED:", os.getenv("ADMIN_EMAIL"))
 
-    if x_admin_key != os.getenv("ADMIN_SECRET"):
-        raise HTTPException(status_code=403, detail="Unauthorized")
+    if not x_user_email:
+        raise HTTPException(status_code=401, detail="Missing email")
+
+    if x_user_email.lower() != os.getenv("ADMIN_EMAIL", "").lower():
+        raise HTTPException(status_code=403, detail="Admins only")
