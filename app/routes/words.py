@@ -30,6 +30,8 @@ def get_db():
 # ADMIN AUTH (SIMPLE EMAIL CHECK)
 # -------------------------
 def verify_admin(x_user_email: str = Header(None)):
+    print("HEADER RECEIVED:", x_user_email)
+
     if not x_user_email:
         raise HTTPException(status_code=401, detail="Missing email")
 

@@ -64,7 +64,9 @@ function AdminDashboard({ onBack }) {
           signal: controller.signal,
           headers: {
             "x-user-email": email,
+            "Content-Type": "application/json",
           },
+          withCredentials: false,
         });
 
         setWords(res.data.items);
