@@ -182,6 +182,7 @@ function App() {
   /* ---------------- UI ---------------- */
   return (
     <div>
+      {/* ---------------- ADMIN AREA ---------------- */}
       {showAdmin ? (
         !session ? (
           /* LOGIN */
@@ -192,14 +193,18 @@ function App() {
               alignItems: "center",
               justifyContent: "center",
               background: darkMode ? "#111" : "#fff",
+              padding: 16,
+              boxSizing: "border-box",
             }}
           >
             <div
               style={{
-                width: 320,
+                width: "100%",
+                maxWidth: 340,
                 padding: 20,
                 borderRadius: 10,
                 background: darkMode ? "#1a1a1a" : "#f5f5f5",
+                boxSizing: "border-box",
               }}
             >
               <h2>Admin Login</h2>
@@ -208,7 +213,12 @@ function App() {
                 placeholder="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                style={{ width: "100%", marginBottom: 10 }}
+                style={{
+                  width: "100%",
+                  marginBottom: 10,
+                  padding: 8,
+                  boxSizing: "border-box",
+                }}
               />
 
               <input
@@ -216,7 +226,12 @@ function App() {
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                style={{ width: "100%", marginBottom: 10 }}
+                style={{
+                  width: "100%",
+                  marginBottom: 10,
+                  padding: 8,
+                  boxSizing: "border-box",
+                }}
               />
 
               <button onClick={handleLogin} style={{ width: "100%" }}>
@@ -230,129 +245,185 @@ function App() {
           <AdminDashboard onBack={() => setShowAdmin(false)} />
         )
       ) : (
-        /* MAIN APP */
+        /* ---------------- MAIN APP ---------------- */
         <div
           style={{
             minHeight: "100vh",
             backgroundColor: darkMode ? "#111" : "#fff",
             color: darkMode ? "#fff" : "#000",
             display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            padding: 20,
+            justifyContent: "center",
+            padding: 16,
             fontFamily: "Arial",
+            boxSizing: "border-box",
           }}
         >
-          <h1>📘 Technical Dictionary</h1>
+          {/* MAIN WRAPPER */}
+          <div style={{ width: "100%", maxWidth: 900 }}>
 
-          {/* CONTROLS */}
-          <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search word..."
-            />
-
-            <button onClick={handleSearch}>Search</button>
-
-            <button onClick={toggleMode}>
-              {mode === "card" ? "📖 Book" : "🃏 Card"}
-            </button>
-
-            <button onClick={() => setDarkMode(!darkMode)}>
-              {darkMode ? "☀️" : "🌙"}
-            </button>
-
-            <button onClick={() => setStudyMode(!studyMode)}>
-              {studyMode ? "👁️" : "👓"}
-            </button>
-
-            <button onClick={() => setShowAdmin(true)}>
-              🛠 Admin
-            </button>
-          </div>
-
-          {/* BOOK MODE */}
-          {mode === "book" ? (
-            <div style={{ width: "100%", maxWidth: 700 }}>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                {alphabet.map((l) => (
-                  <button key={l} onClick={() => handleLetterClick(l)}>
-                    {l}
-                  </button>
-                ))}
-                <button onClick={handleAllClick}>All</button>
-              </div>
-
-              {words.map((w) => (
-                <BookItem key={w.id} word={w} darkMode={darkMode} />
-              ))}
-
-              <div style={{ marginTop: 20 }}>
-                <button
-                  disabled={page === 0}
-                  onClick={() => {
-                    const newPage = page - 1;
-                    activeLetter
-                      ? loadLetterPage(activeLetter, newPage)
-                      : loadPage(newPage);
-                  }}
-                >
-                  Prev
-                </button>
-
-                <span>
-                  Page {page + 1} / {Math.ceil(total / PAGE_SIZE)}
-                </span>
-
-                <button
-                  disabled={!hasMore}
-                  onClick={() => {
-                    const newPage = page + 1;
-                    activeLetter
-                      ? loadLetterPage(activeLetter, newPage)
-                      : loadPage(newPage);
-                  }}
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          ) : (
-            /* CARD MODE */
-            <div style={{ width: "100%", maxWidth: 700 }}>
-              <div
+            {/* HEADER (FIXED MOBILE STACK ISSUE) */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 10,
+                textAlign: "center",
+              }}
+            >
+              <h1
                 style={{
-                  borderBottom: "1px solid #444",
-                  padding: "12px",
-                  background: darkMode ? "#1a1a1a" : "#f7f7f7",
-                  borderRadius: "10px",
-                  marginTop: 10,
+                  color: darkMode ? "#fff" : "#111",
+                  margin: 0,
+                  fontSize: "clamp(20px, 5vw, 32px)",
                 }}
               >
-                {!hasSearched || !currentWord ? (
-                  <p>📘 Search a word</p>
-                ) : (
-                  <>
-                    <h3>{currentWord.word}</h3>
-
-                    {studyMode && !revealed ? (
-                      <p onClick={() => setRevealed(true)}>
-                        Click to reveal
-                      </p>
-                    ) : (
-                      <>
-                        <p>{currentWord.definition}</p>
-                        <p><b>Example:</b> {currentWord.example}</p>
-                        <p><b>Grammar:</b> {currentWord.grammar_class}</p>
-                        <p><b>Topic:</b> {currentWord.topic}</p>
-                      </>
-                    )}
-                  </>
-                )}
-              </div>
+                📘 Technical Dictionary
+              </h1>
             </div>
-          )}
+
+            {/* CONTROLS */}
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 10,
+                marginBottom: 20,
+                justifyContent: "center",
+              }}
+            >
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search word..."
+                style={{
+                  flex: "1 1 160px",
+                  minWidth: 140,
+                  padding: 8,
+                }}
+              />
+
+              <button onClick={handleSearch}>Search</button>
+
+              <button onClick={toggleMode}>
+                {mode === "card" ? "📖 Book" : "🃏 Card"}
+              </button>
+
+              <button onClick={() => setDarkMode(!darkMode)}>
+                {darkMode ? "☀️" : "🌙"}
+              </button>
+
+              <button onClick={() => setStudyMode(!studyMode)}>
+                {studyMode ? "👁️" : "👓"}
+              </button>
+
+              <button onClick={() => setShowAdmin(true)}>
+                🛠 Admin
+              </button>
+            </div>
+
+            {/* BOOK MODE */}
+            {mode === "book" ? (
+              <div style={{ width: "100%" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 6,
+                    justifyContent: "center",
+                  }}
+                >
+                  {alphabet.map((l) => (
+                    <button key={l} onClick={() => handleLetterClick(l)}>
+                      {l}
+                    </button>
+                  ))}
+                  <button onClick={handleAllClick}>All</button>
+                </div>
+
+                <div style={{ marginTop: 10 }}>
+                  {words.map((w) => (
+                    <BookItem key={w.id} word={w} darkMode={darkMode} />
+                  ))}
+                </div>
+
+                {/* PAGINATION */}
+                <div
+                  style={{
+                    marginTop: 20,
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 10,
+                    justifyContent: "center",
+                  }}
+                >
+                  <button
+                    disabled={page === 0}
+                    onClick={() => {
+                      const newPage = page - 1;
+                      activeLetter
+                        ? loadLetterPage(activeLetter, newPage)
+                        : loadPage(newPage);
+                    }}
+                  >
+                    Prev
+                  </button>
+
+                  <span>
+                    Page {page + 1} / {Math.ceil(total / PAGE_SIZE)}
+                  </span>
+
+                  <button
+                    disabled={!hasMore}
+                    onClick={() => {
+                      const newPage = page + 1;
+                      activeLetter
+                        ? loadLetterPage(activeLetter, newPage)
+                        : loadPage(newPage);
+                    }}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* CARD MODE */
+              <div style={{ width: "100%" }}>
+                <div
+                  style={{
+                    borderBottom: "1px solid #444",
+                    padding: 12,
+                    background: darkMode ? "#1a1a1a" : "#f7f7f7",
+                    borderRadius: 10,
+                    marginTop: 10,
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {!hasSearched || !currentWord ? (
+                    <p>📘 Search a word</p>
+                  ) : (
+                    <>
+                      <h3>{currentWord.word}</h3>
+
+                      {studyMode && !revealed ? (
+                        <p onClick={() => setRevealed(true)}>
+                          Click to reveal
+                        </p>
+                      ) : (
+                        <>
+                          <p>{currentWord.definition}</p>
+                          <p><b>Example:</b> {currentWord.example}</p>
+                          <p><b>Grammar:</b> {currentWord.grammar_class}</p>
+                          <p><b>Topic:</b> {currentWord.topic}</p>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

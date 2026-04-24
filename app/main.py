@@ -18,16 +18,14 @@ models.Base.metadata.create_all(bind=engine)
 # Create FastAPI app
 app = FastAPI(title="English Technical Dictionary")
 
-origins = [
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "https://english-technical-dictionary.vercel.app",
-    "https://english-technical-dictionary-iurx5a1s8-lauglitchs-projects.vercel.app",
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://english-technical-dictionary.vercel.app",
+        "https://english-technical-dictionary-iurx5a1s8-lauglitchs-projects.vercel.app",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

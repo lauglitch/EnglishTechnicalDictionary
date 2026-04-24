@@ -98,7 +98,7 @@ function AdminDashboard({ onBack }) {
 
     if (!window.confirm("Delete this word?")) return;
 
-    await api.delete(`/${word}`);
+    api.delete(`/${word}`)
 
     reload(page, filter);
   };
