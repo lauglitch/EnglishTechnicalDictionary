@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "https://englishtechnicaldictionary.onrender.com",
+  baseURL: "https://englishtechnicaldictionary.onrender.com/words",
 });
 
 // Automatically attach admin email

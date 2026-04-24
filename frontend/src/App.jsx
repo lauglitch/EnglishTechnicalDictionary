@@ -60,7 +60,6 @@ function App() {
   const [showAdmin, setShowAdmin] = useState(false);
 
   const [session, setSession] = useState(null);
-  const [, setLoadingSession] = useState(true);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -90,27 +89,19 @@ function App() {
   useEffect(() => {
     let mounted = true;
 
-    const initAuth = async () => {
-      const { data } = await supabase.auth.getSession();
-
-      if (mounted) {
-        setSession(data.session);
-        setLoadingSession(false);
-      }
-    };
-
-    initAuth();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setLoadingSession(false);
+    supabase.auth.getSession().then(({ data }) => {
+      if (mounted) setSession(data.session);
     });
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (mounted) setSession(session);
+      }
+    );
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      listener.subscription.unsubscribe();
     };
   }, []);
 

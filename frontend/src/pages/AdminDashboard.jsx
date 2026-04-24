@@ -11,6 +11,11 @@ function AdminDashboard({ onBack }) {
   const [filter, setFilter] = useState("all");
   const [session, setSession] = useState(null);
 
+  const [query, setQuery] = useState({
+    page: 0,
+    filter: "all",
+  });
+
   /* ---------------- SESSION ---------------- */
   useEffect(() => {
     let mounted = true;
@@ -22,33 +27,30 @@ function AdminDashboard({ onBack }) {
 
     init();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data } = supabase.auth.onAuthStateChange((_event, newSession) => {
       if (mounted) setSession(newSession);
     });
 
+    // ✅ FIX: correct cleanup
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      data.subscription?.unsubscribe();
     };
   }, []);
 
   /* ---------------- FETCH ---------------- */
   useEffect(() => {
-    if (!session?.user?.email) {
-      return <p>Please log in again</p>;
-    }
+    if (!session?.user?.email) return;
 
     const controller = new AbortController();
 
     const fetchWords = async () => {
-      const skip = page * PAGE_SIZE;
+      const skip = query.page * PAGE_SIZE;
 
-      let url = `/words/admin?skip=${skip}&limit=${PAGE_SIZE}`;
+      let url = `/admin?skip=${skip}&limit=${PAGE_SIZE}`;
 
-      if (filter !== "all") {
-        url += `&status=${filter}`;
+      if (query.filter !== "all") {
+        url += `&status=${query.filter}`;
       }
 
       try {
@@ -58,10 +60,10 @@ function AdminDashboard({ onBack }) {
           signal: controller.signal,
         });
 
-        const data = res?.data;
-
-        setWords(Array.isArray(data?.items) ? data.items : []);
-        setTotal(data?.total ?? 0);
+        setWords(res.data?.items || []);
+        setTotal(res.data?.total || 0);
+        setPage(query.page);
+        setFilter(query.filter);
       } catch (err) {
         if (err.name !== "CanceledError") {
           console.error("ADMIN FETCH ERROR:", err);
@@ -72,24 +74,23 @@ function AdminDashboard({ onBack }) {
     fetchWords();
 
     return () => controller.abort();
-  }, [session, page, filter]);
+  }, [session, query]);
 
   /* ---------------- RELOAD ---------------- */
-  const reload = (newPage = 0, newFilter = filter) => {
-    setPage(newPage);
-    setFilter(newFilter);
+  const reload = (newPage = page, newFilter = filter) => {
+    setQuery({
+      page: newPage,
+      filter: newFilter,
+    });
   };
 
   /* ---------------- ACTIONS ---------------- */
   const updateStatus = async (id, status) => {
     if (!session?.user?.email) return;
 
-    try {
-      await api.patch(`/words/admin/${id}/status?status=${status}`);
-      reload(page, filter);
-    } catch (err) {
-      console.error("UPDATE STATUS ERROR:", err);
-    }
+    await api.patch(`/admin/${id}/status?status=${status}`);
+
+    reload(page, filter);
   };
 
   const deleteWord = async (word) => {
@@ -97,12 +98,9 @@ function AdminDashboard({ onBack }) {
 
     if (!window.confirm("Delete this word?")) return;
 
-    try {
-      await api.delete(`/words/${word}`);
-      reload(page, filter);
-    } catch (err) {
-      console.error("DELETE ERROR:", err);
-    }
+    await api.delete(`/${word}`);
+
+    reload(page, filter);
   };
 
   /* ---------------- PAGINATION ---------------- */
@@ -134,7 +132,7 @@ function AdminDashboard({ onBack }) {
       </div>
 
       {/* WORD LIST */}
-      {words.map((w) => (
+      {(words || []).map((w) => (
         <div
           key={w.id}
           style={{ borderBottom: "1px solid #ccc", padding: 10 }}
@@ -159,10 +157,7 @@ function AdminDashboard({ onBack }) {
 
       {/* PAGINATION */}
       <div style={{ marginTop: 20 }}>
-        <button
-          disabled={page === 0}
-          onClick={() => reload(page - 1, filter)}
-        >
+        <button disabled={page === 0} onClick={() => reload(page - 1, filter)}>
           Prev
         </button>
 
@@ -170,10 +165,7 @@ function AdminDashboard({ onBack }) {
           Page {page + 1} / {Math.ceil(total / PAGE_SIZE)}
         </span>
 
-        <button
-          disabled={!hasMore}
-          onClick={() => reload(page + 1, filter)}
-        >
+        <button disabled={!hasMore} onClick={() => reload(page + 1, filter)}>
           Next
         </button>
       </div>

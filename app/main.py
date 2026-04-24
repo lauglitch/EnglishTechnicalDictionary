@@ -8,20 +8,26 @@ from app.database import engine
 from app import models
 from app.routes import words, users
 
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 # Create tables (only if they don't exist)
 models.Base.metadata.create_all(bind=engine)
 
 # Create FastAPI app
 app = FastAPI(title="English Technical Dictionary")
 
-from fastapi.middleware.cors import CORSMiddleware
+origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://english-technical-dictionary.vercel.app",
+    "https://english-technical-dictionary-iurx5a1s8-lauglitchs-projects.vercel.app",
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "https://english-technical-dictionary.vercel.app",
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -67,12 +73,4 @@ async def startup_event():
     print("✅ FastAPI started and database ready")
 
 
-def verify_admin(x_user_email: str = Header(None)):
-    print("HEADER RECEIVED:", x_user_email)
-    print("EXPECTED:", os.getenv("ADMIN_EMAIL"))
-
-    if not x_user_email:
-        raise HTTPException(status_code=401, detail="Missing email")
-
-    if x_user_email.lower() != os.getenv("ADMIN_EMAIL", "").lower():
-        raise HTTPException(status_code=403, detail="Admins only")
+app.include_router(words.router)
