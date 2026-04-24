@@ -83,6 +83,7 @@ function App() {
     }
 
     setSession(data.session);
+    localStorage.setItem("adminEmail", data.session.user.email);
   };
 
   /* ---------------- SESSION ---------------- */

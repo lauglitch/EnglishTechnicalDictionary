@@ -36,7 +36,9 @@ function AdminDashboard({ onBack }) {
 
   /* ---------------- FETCH ---------------- */
   useEffect(() => {
-    if (!session?.user?.email) return;
+    if (!session?.user?.email) {
+      return <p>Please log in again</p>;
+    }
 
     const controller = new AbortController();
 
@@ -56,8 +58,10 @@ function AdminDashboard({ onBack }) {
           signal: controller.signal,
         });
 
-        setWords(res.data.items);
-        setTotal(res.data.total);
+        const data = res?.data;
+
+        setWords(Array.isArray(data?.items) ? data.items : []);
+        setTotal(data?.total ?? 0);
       } catch (err) {
         if (err.name !== "CanceledError") {
           console.error("ADMIN FETCH ERROR:", err);

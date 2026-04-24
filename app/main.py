@@ -8,21 +8,17 @@ from app.database import engine
 from app import models
 from app.routes import words, users
 
-
 # Create tables (only if they don't exist)
 models.Base.metadata.create_all(bind=engine)
 
-
 # Create FastAPI app
 app = FastAPI(title="English Technical Dictionary")
-
 
 from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",
         "http://localhost:5173",
         "https://english-technical-dictionary.vercel.app",
     ],
