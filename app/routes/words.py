@@ -1,10 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 import os
 
 from app import schemas, crud, models
 from app.database import SessionLocal
+
+from app.auth.dependencies import get_current_user
+from app.auth.supabase_jwt import SupabaseUser
+
 
 router = APIRouter(prefix="/words", tags=["words"])
 
@@ -24,13 +28,11 @@ def get_db():
 
 
 # -------------------------
-# ADMIN AUTH
+# ADMIN AUTH (JWT-based now)
 # -------------------------
-def verify_admin(x_user_email: str = Header(None)):
-    print("ADMIN ENV:", ADMIN_EMAIL)
-    print("HEADER RECEIVED:", x_user_email)
-
-    return
+def verify_admin(user: SupabaseUser):
+    if not user.email or user.email.lower() != ADMIN_EMAIL:
+        raise HTTPException(status_code=403, detail="Admin access required")
 
 
 # -------------------------
@@ -47,7 +49,7 @@ def get_all_words(skip: int = 0, limit: int = 10, db: Session = Depends(get_db))
 
 
 # -------------------------
-# LETTER FILTER
+# LETTER FILTER (PUBLIC)
 # -------------------------
 @router.get("/letter/{letter}")
 def get_words_by_letter(
@@ -68,11 +70,15 @@ def get_words_by_letter(
 
 
 # -------------------------
-# CREATE WORD
+# CREATE WORD (PROTECTED)
 # -------------------------
 @router.post("/")
-def create_word(word: schemas.WordCreate, db: Session = Depends(get_db)):
-    created = crud.create_word(db, word, user_id=1)
+def create_word(
+    word: schemas.WordCreate,
+    db: Session = Depends(get_db),
+    user: SupabaseUser = Depends(get_current_user),
+):
+    created = crud.create_word(db, word, user_id=user.user_id)
 
     if not created:
         raise HTTPException(status_code=400, detail="Word already exists")
@@ -81,11 +87,15 @@ def create_word(word: schemas.WordCreate, db: Session = Depends(get_db)):
 
 
 # -------------------------
-# SUBMIT WORD
+# SUBMIT WORD (PROTECTED)
 # -------------------------
 @router.post("/submit")
-def submit_word(word: schemas.WordCreate, db: Session = Depends(get_db)):
-    new_word = crud.create_word(db, word, user_id=1)
+def submit_word(
+    word: schemas.WordCreate,
+    db: Session = Depends(get_db),
+    user: SupabaseUser = Depends(get_current_user),
+):
+    new_word = crud.create_word(db, word, user_id=user.user_id)
 
     if not new_word:
         raise HTTPException(status_code=400, detail="Word already exists")
@@ -98,10 +108,15 @@ def submit_word(word: schemas.WordCreate, db: Session = Depends(get_db)):
 
 
 # -------------------------
-# UPDATE WORD
+# UPDATE WORD (PROTECTED)
 # -------------------------
 @router.patch("/{word_str}")
-def patch_word(word_str: str, word_data: dict, db: Session = Depends(get_db)):
+def patch_word(
+    word_str: str,
+    word_data: dict,
+    db: Session = Depends(get_db),
+    user: SupabaseUser = Depends(get_current_user),
+):
     updated = crud.update_word_fields(db, word_str, word_data)
 
     if not updated:
@@ -111,10 +126,14 @@ def patch_word(word_str: str, word_data: dict, db: Session = Depends(get_db)):
 
 
 # -------------------------
-# DELETE WORD
+# DELETE WORD (PROTECTED)
 # -------------------------
 @router.delete("/{word_str}")
-def delete_word(word_str: str, db: Session = Depends(get_db)):
+def delete_word(
+    word_str: str,
+    db: Session = Depends(get_db),
+    user: SupabaseUser = Depends(get_current_user),
+):
     deleted = crud.delete_word_by_name(db, word_str)
 
     if not deleted:
@@ -124,7 +143,7 @@ def delete_word(word_str: str, db: Session = Depends(get_db)):
 
 
 # -------------------------
-# ADMIN DASHBOARD
+# ADMIN DASHBOARD (PROTECTED + ADMIN)
 # -------------------------
 @router.get("/admin")
 def get_admin_words(
@@ -132,9 +151,9 @@ def get_admin_words(
     skip: int = 0,
     limit: int = 10,
     db: Session = Depends(get_db),
-    x_user_email: str = Header(None),
+    user: SupabaseUser = Depends(get_current_user),
 ):
-    verify_admin(x_user_email)
+    verify_admin(user)
 
     query = db.query(models.Word)
 
@@ -148,16 +167,16 @@ def get_admin_words(
 
 
 # -------------------------
-# UPDATE STATUS
+# UPDATE STATUS (ADMIN)
 # -------------------------
 @router.patch("/admin/{word_id}/status")
 def update_status(
     word_id: int,
     status: str,
     db: Session = Depends(get_db),
-    x_user_email: str = Header(None),
+    user: SupabaseUser = Depends(get_current_user),
 ):
-    verify_admin(x_user_email)
+    verify_admin(user)
 
     word = db.get(models.Word, word_id)
 
@@ -171,7 +190,19 @@ def update_status(
 
 
 # -------------------------
-# GET SINGLE WORD
+# TEST PROTECTED ROUTE
+# -------------------------
+@router.get("/protected")
+async def protected_route(user: SupabaseUser = Depends(get_current_user)):
+    return {
+        "message": "You are authenticated",
+        "user_id": user.user_id,
+        "email": user.email,
+    }
+
+
+# -------------------------
+# GET SINGLE WORD (PUBLIC)
 # -------------------------
 @router.get("/{word_str}")
 def get_word(word_str: str, db: Session = Depends(get_db)):

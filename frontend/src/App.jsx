@@ -69,20 +69,37 @@ function App() {
 
   /* ---------------- LOGIN ---------------- */
   const handleLogin = async () => {
+    console.log("LOGIN CLICKED");
+
     setAuthError(null);
+
+    console.log("Email:", email);
+    console.log("Password length:", password?.length);
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
+    console.log("Supabase response:", { data, error });
+
     if (error) {
+      console.error("Login error:", error.message);
       setAuthError(error.message);
       return;
     }
 
+    if (!data?.session) {
+      console.error("No session returned:", data);
+      return;
+    }
+
+    const token = data.session.access_token;
+
+    console.log("JWT TOKEN:", token);
+  
     setSession(data.session);
-    localStorage.setItem("adminEmail", data.session.user.email);
+    localStorage.setItem("access_token", token);
   };
 
   /* ---------------- SESSION ---------------- */

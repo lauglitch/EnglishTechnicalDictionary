@@ -1,4 +1,7 @@
 # app/main.py
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -46,6 +49,10 @@ async def debug_middleware(request, call_next):
 # Include routers ONLY ONCE
 app.include_router(words.router)
 app.include_router(users.router)
+
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
+
+print("SECRET LOADED:", SUPABASE_JWT_SECRET is not None)
 
 
 # Basic endpoints
