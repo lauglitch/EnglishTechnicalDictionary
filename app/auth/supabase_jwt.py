@@ -1,78 +1,94 @@
 import os
-import httpx
-from jose import jwt
-from fastapi import HTTPException, status
-from functools import lru_cache
+import time
+import requests
+from jose import jwt, JWTError
+from fastapi import HTTPException
 
-SUPABASE_PROJECT_URL = os.getenv("SUPABASE_PROJECT_URL")
-JWKS_URL = f"{SUPABASE_PROJECT_URL}/auth/v1/.well-known/jwks.json"
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
+
+if not SUPABASE_URL:
+    raise RuntimeError("SUPABASE_URL is not set in environment variables")
+
+# JWKS endpoint (Supabase public keys)
+JWKS_URL = f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json"
+
+# Cache JWKS in memory (important for Render stability)
+_JWKS_CACHE = {"keys": None, "fetched_at": 0}
+
+CACHE_TTL_SECONDS = 3600  # 1 hour
 
 
-class SupabaseUser:
-    def __init__(self, user_id: str, email: str = None, raw: dict = None):
-        self.user_id = user_id
-        self.email = email
-        self.raw = raw or {}
+def _get_jwks():
+    """
+    Fetch JWKS with caching to avoid Render network instability.
+    """
+    now = time.time()
 
+    # return cached version if still valid
+    if _JWKS_CACHE["keys"] and (now - _JWKS_CACHE["fetched_at"] < CACHE_TTL_SECONDS):
+        return _JWKS_CACHE["keys"]
 
-# -------------------------
-# CACHE JWKS (IMPORTANT)
-# -------------------------
-@lru_cache(maxsize=1)
-def get_jwks():
     try:
-        with httpx.Client(timeout=5.0) as client:
-            return client.get(JWKS_URL).json()
+        response = requests.get(JWKS_URL, timeout=5)
+        response.raise_for_status()
+        jwks = response.json()
+
+        _JWKS_CACHE["keys"] = jwks
+        _JWKS_CACHE["fetched_at"] = now
+
+        return jwks
+
     except Exception as e:
+        # IMPORTANT: do NOT crash app with 503
+        # fallback to cached keys if available
+        if _JWKS_CACHE["keys"]:
+            return _JWKS_CACHE["keys"]
+
         raise HTTPException(
-            status_code=503, detail="Auth service unavailable (JWKS fetch failed)"
-        ) from e
+            status_code=401,
+            detail=f"Auth service unavailable (JWKS fetch failed): {str(e)}",
+        )
 
 
-# -------------------------
-# VERIFY TOKEN
-# -------------------------
-async def verify_supabase_jwt(token: str) -> SupabaseUser:
+def verify_supabase_jwt(token: str):
+    """
+    Verify Supabase JWT in a production-safe way.
+    Never throws 503 anymore.
+    """
+
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing token")
+
     try:
-        jwks = get_jwks()
+        jwks = _get_jwks()
 
-        header = jwt.get_unverified_header(token)
-        kid = header.get("kid")
+        headers = jwt.get_unverified_header(token)
+        kid = headers.get("kid")
+
+        if not kid:
+            raise HTTPException(status_code=401, detail="Invalid token header")
 
         key = next((k for k in jwks["keys"] if k["kid"] == kid), None)
 
         if not key:
-            raise HTTPException(
-                status_code=401, detail="Invalid token key (kid not found)"
-            )
+            raise HTTPException(status_code=401, detail="Public key not found")
 
         payload = jwt.decode(
             token,
             key,
             algorithms=["ES256"],
             audience="authenticated",
-            issuer=f"{SUPABASE_PROJECT_URL}/auth/v1",
-            options={
-                "verify_signature": True,
-                "verify_aud": True,
-                "verify_exp": True,
-            },
+            issuer=f"{SUPABASE_URL}/auth/v1",
         )
 
-        return SupabaseUser(
-            user_id=payload.get("sub"),
-            email=payload.get("email"),
-            raw=payload,
+        return payload
+
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    except Exception as e:
+        # IMPORTANT: never leak 500/503 to frontend for auth
+        raise HTTPException(
+            status_code=401, detail=f"Token verification failed: {str(e)}"
         )
-
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-
-    except jwt.JWTError as e:
-        raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
-
-    except HTTPException:
-        raise
-
-    except Exception:
-        raise HTTPException(status_code=401, detail="Authentication failed")
