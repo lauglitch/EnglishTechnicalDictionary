@@ -23,15 +23,7 @@ app = FastAPI(title="English Technical Dictionary")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "https://english-technical-dictionary.vercel.app",
-        "https://english-technical-dictionary-iurx5a1s8-lauglitchs-projects.vercel.app",
-        "https://english-technical-dictionary-git-staging-*.vercel.app",
-        "https://english-technical-dictionary-7nnedo9ly-lauglitchs-projects.vercel.app",
-        "https://englishtechnicaldictionary.onrender.com",
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
