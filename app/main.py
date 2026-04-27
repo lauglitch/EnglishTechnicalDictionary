@@ -23,11 +23,7 @@ app = FastAPI(title="English Technical Dictionary")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"https://.*\.vercel\.app",
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:3000",
-    ],
+    allow_origin_regex=r"https://.*vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -52,6 +48,11 @@ app.include_router(users.router)
 SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 
 print("SECRET LOADED:", SUPABASE_JWT_SECRET is not None)
+
+
+@app.get("/test")
+def test():
+    return {"ok": True}
 
 
 # Basic endpoints
