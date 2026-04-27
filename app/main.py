@@ -23,7 +23,11 @@ app = FastAPI(title="English Technical Dictionary")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -32,8 +36,8 @@ app.add_middleware(
 
 @app.middleware("http")
 async def debug_middleware(request, call_next):
-    print("➡️ REQUEST PATH:", request.url.path)
-    print("➡️ HEADERS:", dict(request.headers))
+    print("REQUEST PATH:", request.url.path)
+    print("HEADERS:", dict(request.headers))
 
     response = await call_next(request)
 
