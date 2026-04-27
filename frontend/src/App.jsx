@@ -66,7 +66,7 @@ function App() {
   const [authError, setAuthError] = useState(null);
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-
+  var token = "";
   /* ---------------- LOGIN ---------------- */
   const handleLogin = async () => {
     console.log("LOGIN CLICKED");
@@ -94,7 +94,7 @@ function App() {
       return;
     }
 
-    const token = data.session.access_token;
+    token = data.session.access_token;
 
     console.log("JWT TOKEN:", token);
   
@@ -299,7 +299,7 @@ function App() {
                 📘 Technical Dictionary
               </h1>
             </div>
-
+                
             {/* CONTROLS */}
             <div
               style={{
@@ -440,6 +440,10 @@ function App() {
                 </div>
               </div>
             )}
+
+            <p style={{ wordBreak: "break-all" , fontSize: "10px" , display: "block"}}>
+              Token: {session?.access_token}
+            </p>
           </div>
         </div>
       )}
