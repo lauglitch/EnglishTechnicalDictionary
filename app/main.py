@@ -29,6 +29,7 @@ app.add_middleware(
         "https://english-technical-dictionary.vercel.app",
         "https://english-technical-dictionary-iurx5a1s8-lauglitchs-projects.vercel.app",
         "https://english-technical-dictionary-git-staging-*.vercel.app",
+        "https://english-technical-dictionary-7nnedo9ly-lauglitchs-projects.vercel.app",
         "https://englishtechnicaldictionary.onrender.com",
     ],
     allow_credentials=True,
