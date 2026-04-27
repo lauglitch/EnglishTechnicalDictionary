@@ -1,60 +1,61 @@
 import os
 import time
-import requests
+import httpx
 from jose import jwt, JWTError
 from fastapi import HTTPException
 
+# ENV VAR (your requested naming)
 SUPABASE_PROJECT_URL = os.getenv("SUPABASE_PROJECT_URL")
 SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 
 if not SUPABASE_PROJECT_URL:
     raise RuntimeError("SUPABASE_PROJECT_URL is not set in environment variables")
 
-# JWKS endpoint (Supabase public keys)
+# Supabase JWKS endpoint
 JWKS_URL = f"{SUPABASE_PROJECT_URL}/auth/v1/.well-known/jwks.json"
 
-# Cache JWKS in memory (important for Render stability)
+# Cache JWKS to avoid repeated network calls (important for Render stability)
 _JWKS_CACHE = {"keys": None, "fetched_at": 0}
 
-CACHE_TTL_SECONDS = 3600  # 1 hour
+CACHE_TTL_SECONDS = 3600  # 1 hour cache
 
 
 def _get_jwks():
     """
-    Fetch JWKS with caching to avoid Render network instability.
+    Fetch JWKS with caching and fallback.
+    Prevents Render cold-start / network issues from breaking auth.
     """
     now = time.time()
 
-    # return cached version if still valid
+    # return cached keys if still valid
     if _JWKS_CACHE["keys"] and (now - _JWKS_CACHE["fetched_at"] < CACHE_TTL_SECONDS):
         return _JWKS_CACHE["keys"]
 
     try:
-        response = requests.get(JWKS_URL, timeout=5)
-        response.raise_for_status()
-        jwks = response.json()
+        with httpx.Client(timeout=5) as client:
+            response = client.get(JWKS_URL)
+            response.raise_for_status()
+            jwks = response.json()
 
         _JWKS_CACHE["keys"] = jwks
         _JWKS_CACHE["fetched_at"] = now
 
         return jwks
 
-    except Exception as e:
-        # IMPORTANT: do NOT crash app with 503
-        # fallback to cached keys if available
+    except Exception:
+        # fallback: use cache if available
         if _JWKS_CACHE["keys"]:
             return _JWKS_CACHE["keys"]
 
         raise HTTPException(
-            status_code=401,
-            detail=f"Auth service unavailable (JWKS fetch failed): {str(e)}",
+            status_code=401, detail="Auth service unavailable (JWKS fetch failed)"
         )
 
 
 def verify_supabase_jwt(token: str):
     """
-    Verify Supabase JWT in a production-safe way.
-    Never throws 503 anymore.
+    Verifies Supabase JWT safely (production-ready).
+    Never breaks CORS or crashes server.
     """
 
     if not token:
@@ -88,7 +89,6 @@ def verify_supabase_jwt(token: str):
         raise HTTPException(status_code=401, detail="Invalid token")
 
     except Exception as e:
-        # IMPORTANT: never leak 500/503 to frontend for auth
         raise HTTPException(
             status_code=401, detail=f"Token verification failed: {str(e)}"
         )
