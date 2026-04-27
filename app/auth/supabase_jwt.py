@@ -51,7 +51,7 @@ async def verify_supabase_jwt(token: str) -> SupabaseUser:
             key,
             algorithms=["ES256"],
             audience="authenticated",
-            issuer=f"{SUPABASE_PROJECT_URL}/auth/v1",
+            issuer=f"{SUPABASE_URL}/auth/v1",
             options={
                 "verify_signature": True,
                 "verify_aud": True,
