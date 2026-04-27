@@ -4,14 +4,14 @@ import requests
 from jose import jwt, JWTError
 from fastapi import HTTPException
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_PROJECT_URL = os.getenv("SUPABASE_PROJECT_URL")
 SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 
-if not SUPABASE_URL:
-    raise RuntimeError("SUPABASE_URL is not set in environment variables")
+if not SUPABASE_PROJECT_URL:
+    raise RuntimeError("SUPABASE_PROJECT_URL is not set in environment variables")
 
 # JWKS endpoint (Supabase public keys)
-JWKS_URL = f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json"
+JWKS_URL = f"{SUPABASE_PROJECT_URL}/auth/v1/.well-known/jwks.json"
 
 # Cache JWKS in memory (important for Render stability)
 _JWKS_CACHE = {"keys": None, "fetched_at": 0}
@@ -79,7 +79,7 @@ def verify_supabase_jwt(token: str):
             key,
             algorithms=["ES256"],
             audience="authenticated",
-            issuer=f"{SUPABASE_URL}/auth/v1",
+            issuer=f"{SUPABASE_PROJECT_URL}/auth/v1",
         )
 
         return payload
