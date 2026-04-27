@@ -4,8 +4,8 @@ from jose import jwt
 from fastapi import HTTPException, status
 from functools import lru_cache
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-JWKS_URL = f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json"
+SUPABASE_PROJECT_URL = os.getenv("SUPABASE_PROJECT_URL")
+JWKS_URL = f"{SUPABASE_PROJECT_URL}/auth/v1/.well-known/jwks.json"
 
 
 class SupabaseUser:
@@ -51,7 +51,7 @@ async def verify_supabase_jwt(token: str) -> SupabaseUser:
             key,
             algorithms=["ES256"],
             audience="authenticated",
-            issuer=f"{SUPABASE_URL}/auth/v1",
+            issuer=f"{SUPABASE_PROJECT_URL}/auth/v1",
             options={
                 "verify_signature": True,
                 "verify_aud": True,

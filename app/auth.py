@@ -2,8 +2,8 @@ import jwt
 import requests
 from fastapi import Header, HTTPException, Depends
 
-SUPABASE_URL = "https://YOUR_PROJECT.supabase.co"
-JWKS_URL = f"{SUPABASE_URL}/auth/v1/keys"
+SUPABASE_PROJECT_URL = "https://YOUR_PROJECT.supabase.co"
+JWKS_URL = f"{SUPABASE_PROJECT_URL}/auth/v1/keys"
 
 # cache keys (important for performance)
 _jwks = requests.get(JWKS_URL).json()
@@ -34,7 +34,7 @@ def verify_jwt(authorization: str = Header(None)):
             public_key,
             algorithms=["RS256"],
             audience="authenticated",
-            issuer=f"{SUPABASE_URL}/auth/v1",
+            issuer=f"{SUPABASE_PROJECT_URL}/auth/v1",
         )
 
         return payload

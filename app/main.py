@@ -28,6 +28,8 @@ app.add_middleware(
         "http://localhost:3000",
         "https://english-technical-dictionary.vercel.app",
         "https://english-technical-dictionary-iurx5a1s8-lauglitchs-projects.vercel.app",
+        "https://english-technical-dictionary-git-staging-*.vercel.app",
+        "https://englishtechnicaldictionary.onrender.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
