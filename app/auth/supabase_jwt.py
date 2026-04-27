@@ -1,10 +1,10 @@
 import os
 import httpx
 from jose import jwt
-from fastapi import HTTPException, status, Request
+from fastapi import HTTPException, status
+from functools import lru_cache
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-
 JWKS_URL = f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json"
 
 
@@ -15,73 +15,64 @@ class SupabaseUser:
         self.raw = raw or {}
 
 
-async def verify_supabase_jwt(token: str) -> SupabaseUser:
-    """
-    Validates Supabase JWT using JWKS (ES256 compatible)
-    """
-
+# -------------------------
+# CACHE JWKS (IMPORTANT)
+# -------------------------
+@lru_cache(maxsize=1)
+def get_jwks():
     try:
-        # 1. Fetch Supabase public keys
-        async with httpx.AsyncClient() as client:
-            jwks = (await client.get(JWKS_URL)).json()
+        with httpx.Client(timeout=5.0) as client:
+            return client.get(JWKS_URL).json()
+    except Exception as e:
+        raise HTTPException(
+            status_code=503, detail="Auth service unavailable (JWKS fetch failed)"
+        ) from e
 
-        # 2. Read token header (to get key id)
-        unverified_header = jwt.get_unverified_header(token)
 
-        # 3. Find correct key
-        key = next(
-            (k for k in jwks["keys"] if k["kid"] == unverified_header["kid"]), None
-        )
+# -------------------------
+# VERIFY TOKEN
+# -------------------------
+async def verify_supabase_jwt(token: str) -> SupabaseUser:
+    try:
+        jwks = get_jwks()
+
+        header = jwt.get_unverified_header(token)
+        kid = header.get("kid")
+
+        key = next((k for k in jwks["keys"] if k["kid"] == kid), None)
 
         if not key:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token key",
+                status_code=401, detail="Invalid token key (kid not found)"
             )
 
-        # 4. Verify JWT
         payload = jwt.decode(
             token,
             key,
             algorithms=["ES256"],
             audience="authenticated",
-            issuer=f"{SUPABASE_URL}/auth/v1",
+            issuer=f"{SUPABASE_PROJECT_URL}/auth/v1",
+            options={
+                "verify_signature": True,
+                "verify_aud": True,
+                "verify_exp": True,
+            },
         )
 
-        # 5. Extract user info
-        user_id = payload.get("sub")
-        email = payload.get("email")
+        return SupabaseUser(
+            user_id=payload.get("sub"),
+            email=payload.get("email"),
+            raw=payload,
+        )
 
-        if not user_id:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token: missing user id",
-            )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
 
-        return SupabaseUser(user_id=user_id, email=email, raw=payload)
+    except jwt.JWTError as e:
+        raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
+
+    except HTTPException:
+        raise
 
     except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-        )
-
-
-def get_token_from_header(request: Request) -> str:
-    auth = request.headers.get("Authorization")
-
-    if not auth:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing Authorization header",
-        )
-
-    scheme, _, token = auth.partition(" ")
-
-    if scheme.lower() != "bearer" or not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid Authorization header format",
-        )
-
-    return token
+        raise HTTPException(status_code=401, detail="Authentication failed")
