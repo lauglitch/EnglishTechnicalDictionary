@@ -3,17 +3,27 @@ import time
 import httpx
 from jose import jwt, JWTError
 from fastapi import HTTPException
+from pydantic import BaseModel
 
+# ENV VARS
 SUPABASE_PROJECT_URL = os.getenv("SUPABASE_PROJECT_URL")
 SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 
 if not SUPABASE_PROJECT_URL:
-    raise RuntimeError("SUPABASE_PROJECT_URL is not set in environment variables")
+    raise RuntimeError("SUPABASE_PROJECT_URL is not set")
 
+# JWKS endpoint
 JWKS_URL = f"{SUPABASE_PROJECT_URL}/auth/v1/.well-known/jwks.json"
 
+# Cache
 _JWKS_CACHE = {"keys": None, "fetched_at": 0}
 CACHE_TTL_SECONDS = 3600
+
+
+class SupabaseUser(BaseModel):
+    sub: str
+    email: str | None = None
+    role: str | None = None
 
 
 def _get_jwks():
@@ -37,12 +47,10 @@ def _get_jwks():
         if _JWKS_CACHE["keys"]:
             return _JWKS_CACHE["keys"]
 
-        raise HTTPException(
-            status_code=401, detail="Auth service unavailable (JWKS fetch failed)"
-        )
+        raise HTTPException(status_code=401, detail="JWKS fetch failed")
 
 
-def verify_supabase_jwt(token: str):
+def verify_supabase_jwt(token: str) -> SupabaseUser:
     if not token:
         raise HTTPException(status_code=401, detail="Missing token")
 
@@ -68,12 +76,15 @@ def verify_supabase_jwt(token: str):
             issuer=f"{SUPABASE_PROJECT_URL}/auth/v1",
         )
 
-        return payload  # <-- IMPORTANT: return dict (user data)
+        # ✅ Return typed user instead of raw dict
+        return SupabaseUser(
+            sub=payload.get("sub"),
+            email=payload.get("email"),
+            role=payload.get("role"),
+        )
 
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
     except Exception as e:
-        raise HTTPException(
-            status_code=401, detail=f"Token verification failed: {str(e)}"
-        )
+        raise HTTPException(status_code=401, detail=str(e))
