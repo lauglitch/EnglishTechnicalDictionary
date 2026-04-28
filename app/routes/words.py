@@ -147,14 +147,20 @@ def delete_word(
 # -------------------------
 # ADMIN DASHBOARD (PROTECTED + ADMIN)
 # -------------------------
+from fastapi import Request
+
+
 @router.get("/admin")
 def get_admin_words(
+    request: Request,
     status: str = "all",
     skip: int = 0,
     limit: int = 10,
     db: Session = Depends(get_db),
     user: SupabaseUser = Depends(get_current_user),
 ):
+    print("AUTH HEADER:", request.headers.get("authorization"))
+
     verify_admin(user)
 
     query = db.query(models.Word)

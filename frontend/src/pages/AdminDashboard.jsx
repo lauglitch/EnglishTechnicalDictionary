@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import api from "../api/api";
 import { supabase } from "../lib/supabase";
 
@@ -16,7 +16,7 @@ function AdminDashboard({ onBack }) {
     filter: "all",
   });
 
-  const getToken = () => session?.access_token || null;
+  const getToken = useCallback(() => session?.access_token || null, [session]);
 
   /* ---------------- SESSION ---------------- */
   useEffect(() => {
@@ -62,6 +62,7 @@ function AdminDashboard({ onBack }) {
 
       try {
         console.log("ADMIN EMAIL USED:", session?.user?.email);
+        console.log("TOKEN BEING SENT:", session.access_token);
 
         const res = await api.get(url, {
           signal: controller.signal,
@@ -84,7 +85,7 @@ function AdminDashboard({ onBack }) {
     fetchWords();
 
     return () => controller.abort();
-  }, [session, query.page, query.filter]);
+  }, [session, query.page, query.filter, getToken]);
 
   /* ---------------- RELOAD ---------------- */
   const reload = (newPage = page, newFilter = filter) => {
