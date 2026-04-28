@@ -78,7 +78,7 @@ def verify_supabase_jwt(token: str) -> SupabaseUser:
         payload = jwt.decode(
             token,
             key,
-            algorithms=["ES256"],
+            algorithms=["RS256"],
             audience="authenticated",
             issuer=f"{SUPABASE_PROJECT_URL}/auth/v1",
         )
