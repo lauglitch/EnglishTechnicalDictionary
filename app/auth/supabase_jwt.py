@@ -4,10 +4,11 @@ import httpx
 from jose import jwt, JWTError
 from fastapi import HTTPException
 from typing import TypedDict, Optional
+from jose.utils import base64url_decode
 
 
 # -----------------------------
-# SUPABASE USER TYPE (FIX)
+# SUPABASE USER TYPE
 # -----------------------------
 class SupabaseUser(TypedDict, total=False):
     sub: str
@@ -17,7 +18,6 @@ class SupabaseUser(TypedDict, total=False):
 
 
 SUPABASE_PROJECT_URL = os.getenv("SUPABASE_PROJECT_URL")
-SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 
 if not SUPABASE_PROJECT_URL:
     raise RuntimeError("SUPABASE_PROJECT_URL is not set in environment variables")
@@ -55,7 +55,7 @@ def _get_jwks():
 
 
 # -----------------------------
-# JWT VERIFY (returns SupabaseUser)
+# JWT VERIFY
 # -----------------------------
 def verify_supabase_jwt(token: str) -> SupabaseUser:
     if not token:
@@ -75,15 +75,26 @@ def verify_supabase_jwt(token: str) -> SupabaseUser:
         if not key:
             raise HTTPException(status_code=401, detail="Public key not found")
 
+        n = base64url_decode(key["n"].encode("utf-8"))
+        e = base64url_decode(key["e"].encode("utf-8"))
+
+        public_key = {
+            "kty": "RSA",
+            "n": key["n"],
+            "e": key["e"],
+        }
+
         payload = jwt.decode(
             token,
-            key,
+            public_key,
             algorithms=["RS256"],
             audience="authenticated",
             issuer=f"{SUPABASE_PROJECT_URL}/auth/v1",
         )
 
-        # normalize into SupabaseUser shape
+        # DELETE THIS
+        print("JWT PAYLOAD:", payload)
+
         return {
             "sub": payload.get("sub"),
             "email": payload.get("email"),

@@ -30,6 +30,8 @@ def get_db():
 # -------------------------
 # ADMIN AUTH (JWT-based now)
 # -------------------------
+
+
 def verify_admin(user):
     if user.get("app_metadata", {}).get("role") != "admin":
         raise HTTPException(403, "Not admin")
