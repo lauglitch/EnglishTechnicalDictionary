@@ -30,7 +30,6 @@ def _get_jwks():
 
         _JWKS_CACHE["keys"] = jwks
         _JWKS_CACHE["fetched_at"] = now
-
         return jwks
 
     except Exception:
@@ -38,11 +37,12 @@ def _get_jwks():
             return _JWKS_CACHE["keys"]
 
         raise HTTPException(
-            status_code=401, detail="Auth service unavailable (JWKS fetch failed)"
+            status_code=401,
+            detail="Auth service unavailable (JWKS fetch failed)",
         )
 
 
-def verify_supabase_jwt(token: str):
+async def verify_supabase_jwt(token: str):
     if not token:
         raise HTTPException(status_code=401, detail="Missing token")
 
@@ -75,5 +75,6 @@ def verify_supabase_jwt(token: str):
 
     except Exception as e:
         raise HTTPException(
-            status_code=401, detail=f"Token verification failed: {str(e)}"
+            status_code=401,
+            detail=f"Token verification failed: {str(e)}",
         )
