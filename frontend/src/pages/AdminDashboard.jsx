@@ -16,13 +16,18 @@ function AdminDashboard({ onBack }) {
     filter: "all",
   });
 
+  const getToken = () => session?.access_token || null;
+
   /* ---------------- SESSION ---------------- */
   useEffect(() => {
     let mounted = true;
 
     const initSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (mounted) setSession(data.session);
+      const { data, error } = await supabase.auth.getSession();
+
+      if (!error && mounted) {
+        setSession(data.session);
+      }
     };
 
     initSession();
@@ -35,13 +40,14 @@ function AdminDashboard({ onBack }) {
 
     return () => {
       mounted = false;
-      listener.subscription.unsubscribe();
+      listener?.subscription?.unsubscribe?.();
     };
   }, []);
 
   /* ---------------- FETCH ---------------- */
   useEffect(() => {
-    if (!session?.access_token) return;
+    const token = getToken();
+    if (!token) return;
 
     const controller = new AbortController();
 
@@ -55,17 +61,18 @@ function AdminDashboard({ onBack }) {
       }
 
       try {
-        console.log("ADMIN EMAIL USED:", session.user?.email);
+        console.log("ADMIN EMAIL USED:", session?.user?.email);
 
         const res = await api.get(url, {
           signal: controller.signal,
           headers: {
-            Authorization: `Bearer ${session.access_token}`,
+            Authorization: `Bearer ${token}`,
           },
         });
 
         setWords(res.data?.items ?? []);
         setTotal(res.data?.total ?? 0);
+
         setPage(query.page);
         setFilter(query.filter);
       } catch (err) {
@@ -89,7 +96,8 @@ function AdminDashboard({ onBack }) {
 
   /* ---------------- ACTIONS ---------------- */
   const updateStatus = async (id, status) => {
-    if (!session?.access_token) return;
+    const token = getToken();
+    if (!token) return;
 
     try {
       await api.patch(
@@ -97,7 +105,7 @@ function AdminDashboard({ onBack }) {
         {},
         {
           headers: {
-            Authorization: `Bearer ${session.access_token}`,
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -109,14 +117,15 @@ function AdminDashboard({ onBack }) {
   };
 
   const deleteWord = async (word) => {
-    if (!session?.access_token) return;
+    const token = getToken();
+    if (!token) return;
 
     if (!window.confirm("Delete this word?")) return;
 
     try {
       await api.delete(`/${word}`, {
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
