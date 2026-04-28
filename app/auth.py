@@ -32,7 +32,7 @@ def verify_jwt(authorization: str = Header(None)):
         payload = jwt.decode(
             token,
             public_key,
-            algorithms=["RS256"],
+            algorithms=["ES256"],
             audience="authenticated",
             issuer=f"{SUPABASE_PROJECT_URL}/auth/v1",
         )

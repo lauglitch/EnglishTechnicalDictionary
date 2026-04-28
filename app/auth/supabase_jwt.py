@@ -87,13 +87,12 @@ def verify_supabase_jwt(token: str) -> SupabaseUser:
         payload = jwt.decode(
             token,
             public_key,
-            algorithms=["RS256"],
+            algorithms=["ES256"],
             audience="authenticated",
             issuer=f"{SUPABASE_PROJECT_URL}/auth/v1",
         )
-
-        # DELETE THIS
         print("JWT PAYLOAD:", payload)
+        print("JWT HEADER:", headers)
 
         return {
             "sub": payload.get("sub"),
