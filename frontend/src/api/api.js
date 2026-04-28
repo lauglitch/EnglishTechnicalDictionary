@@ -1,15 +1,14 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL + "/words",
+  baseURL: import.meta.env.VITE_API_URL,
 });
 
-// Automatically attach admin email
 api.interceptors.request.use((config) => {
-  const email = localStorage.getItem("adminEmail");
+  const token = localStorage.getItem("access_token");
 
-  if (email) {
-    config.headers["x-user-email"] = email;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
 
   return config;
