@@ -31,7 +31,6 @@ function AdminDashboard({ onBack }) {
       if (mounted) setSession(newSession);
     });
 
-    // ✅ FIX: correct cleanup
     return () => {
       mounted = false;
       data.subscription?.unsubscribe();
