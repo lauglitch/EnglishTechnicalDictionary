@@ -3,6 +3,18 @@ import time
 import httpx
 from jose import jwt, JWTError
 from fastapi import HTTPException
+from typing import TypedDict, Optional
+
+
+# -----------------------------
+# SUPABASE USER TYPE (FIX)
+# -----------------------------
+class SupabaseUser(TypedDict, total=False):
+    sub: str
+    email: Optional[str]
+    role: Optional[str]
+    aud: Optional[str]
+
 
 SUPABASE_PROJECT_URL = os.getenv("SUPABASE_PROJECT_URL")
 SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
@@ -42,7 +54,10 @@ def _get_jwks():
         )
 
 
-async def verify_supabase_jwt(token: str):
+# -----------------------------
+# JWT VERIFY (returns SupabaseUser)
+# -----------------------------
+def verify_supabase_jwt(token: str) -> SupabaseUser:
     if not token:
         raise HTTPException(status_code=401, detail="Missing token")
 
@@ -68,7 +83,13 @@ async def verify_supabase_jwt(token: str):
             issuer=f"{SUPABASE_PROJECT_URL}/auth/v1",
         )
 
-        return payload
+        # normalize into SupabaseUser shape
+        return {
+            "sub": payload.get("sub"),
+            "email": payload.get("email"),
+            "role": payload.get("role"),
+            "aud": payload.get("aud"),
+        }
 
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")

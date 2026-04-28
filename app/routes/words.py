@@ -31,8 +31,8 @@ def get_db():
 # ADMIN AUTH (JWT-based now)
 # -------------------------
 def verify_admin(user: SupabaseUser):
-    if not user["email"] or user["email"].lower() != ADMIN_EMAIL:
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
 
 
 # -------------------------
