@@ -31,7 +31,7 @@ def get_db():
 # ADMIN AUTH (JWT-based now)
 # -------------------------
 def verify_admin(user: SupabaseUser):
-    if not user.email or user.email.lower() != ADMIN_EMAIL:
+    if not user["email"] or user["email"].lower() != ADMIN_EMAIL:
         raise HTTPException(status_code=403, detail="Admin access required")
 
 
@@ -197,7 +197,7 @@ async def protected_route(user: SupabaseUser = Depends(get_current_user)):
     return {
         "message": "You are authenticated",
         "user_id": user.user_id,
-        "email": user.email,
+        "email": user["email"],
     }
 
 

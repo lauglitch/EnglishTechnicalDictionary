@@ -54,7 +54,7 @@ function AdminDashboard({ onBack }) {
       }
 
       try {
-        console.log("ADMIN EMAIL USED:", session.user.email);
+        console.log("ADMIN EMAIL USED:", session.user["email"]);
 
         const res = await api.get(url, {
           signal: controller.signal,

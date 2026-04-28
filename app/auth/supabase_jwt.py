@@ -4,30 +4,21 @@ import httpx
 from jose import jwt, JWTError
 from fastapi import HTTPException
 
-# ENV VAR (your requested naming)
 SUPABASE_PROJECT_URL = os.getenv("SUPABASE_PROJECT_URL")
 SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 
 if not SUPABASE_PROJECT_URL:
     raise RuntimeError("SUPABASE_PROJECT_URL is not set in environment variables")
 
-# Supabase JWKS endpoint
 JWKS_URL = f"{SUPABASE_PROJECT_URL}/auth/v1/.well-known/jwks.json"
 
-# Cache JWKS to avoid repeated network calls (important for Render stability)
 _JWKS_CACHE = {"keys": None, "fetched_at": 0}
-
-CACHE_TTL_SECONDS = 3600  # 1 hour cache
+CACHE_TTL_SECONDS = 3600
 
 
 def _get_jwks():
-    """
-    Fetch JWKS with caching and fallback.
-    Prevents Render cold-start / network issues from breaking auth.
-    """
     now = time.time()
 
-    # return cached keys if still valid
     if _JWKS_CACHE["keys"] and (now - _JWKS_CACHE["fetched_at"] < CACHE_TTL_SECONDS):
         return _JWKS_CACHE["keys"]
 
@@ -43,7 +34,6 @@ def _get_jwks():
         return jwks
 
     except Exception:
-        # fallback: use cache if available
         if _JWKS_CACHE["keys"]:
             return _JWKS_CACHE["keys"]
 
@@ -53,11 +43,6 @@ def _get_jwks():
 
 
 def verify_supabase_jwt(token: str):
-    """
-    Verifies Supabase JWT safely (production-ready).
-    Never breaks CORS or crashes server.
-    """
-
     if not token:
         raise HTTPException(status_code=401, detail="Missing token")
 
@@ -83,7 +68,7 @@ def verify_supabase_jwt(token: str):
             issuer=f"{SUPABASE_PROJECT_URL}/auth/v1",
         )
 
-        return payload
+        return payload  # <-- IMPORTANT: return dict (user data)
 
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
