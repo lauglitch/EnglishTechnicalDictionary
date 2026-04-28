@@ -20,26 +20,28 @@ function AdminDashboard({ onBack }) {
   useEffect(() => {
     let mounted = true;
 
-    const init = async () => {
+    const initSession = async () => {
       const { data } = await supabase.auth.getSession();
       if (mounted) setSession(data.session);
     };
 
-    init();
+    initSession();
 
-    const { data } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      if (mounted) setSession(newSession);
-    });
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, newSession) => {
+        if (mounted) setSession(newSession);
+      }
+    );
 
     return () => {
       mounted = false;
-      data.subscription?.unsubscribe();
+      listener.subscription.unsubscribe();
     };
   }, []);
 
   /* ---------------- FETCH ---------------- */
   useEffect(() => {
-    if (!session?.user?.email) return;
+    if (!session?.access_token) return;
 
     const controller = new AbortController();
 
@@ -53,27 +55,29 @@ function AdminDashboard({ onBack }) {
       }
 
       try {
-        console.log("ADMIN EMAIL USED:", session.user["email"]);
+        console.log("ADMIN EMAIL USED:", session.user?.email);
 
         const res = await api.get(url, {
           signal: controller.signal,
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
         });
 
-        setWords(res.data?.items || []);
-        setTotal(res.data?.total || 0);
+        setWords(res.data?.items ?? []);
+        setTotal(res.data?.total ?? 0);
         setPage(query.page);
         setFilter(query.filter);
       } catch (err) {
-        if (err.name !== "CanceledError") {
-          console.error("ADMIN FETCH ERROR:", err);
-        }
+        if (err?.name === "CanceledError" || err?.code === "ERR_CANCELED") return;
+        console.error("ADMIN FETCH ERROR:", err);
       }
     };
 
     fetchWords();
 
     return () => controller.abort();
-  }, [session, query]);
+  }, [session, query.page, query.filter]);
 
   /* ---------------- RELOAD ---------------- */
   const reload = (newPage = page, newFilter = filter) => {
@@ -85,21 +89,41 @@ function AdminDashboard({ onBack }) {
 
   /* ---------------- ACTIONS ---------------- */
   const updateStatus = async (id, status) => {
-    if (!session?.user?.email) return;
+    if (!session?.access_token) return;
 
-    await api.patch(`/admin/${id}/status?status=${status}`);
+    try {
+      await api.patch(
+        `/admin/${id}/status?status=${status}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
 
-    reload(page, filter);
+      reload(page, filter);
+    } catch (err) {
+      console.error("UPDATE STATUS ERROR:", err);
+    }
   };
 
   const deleteWord = async (word) => {
-    if (!session?.user?.email) return;
+    if (!session?.access_token) return;
 
     if (!window.confirm("Delete this word?")) return;
 
-    api.delete(`/${word}`)
+    try {
+      await api.delete(`/${word}`, {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
 
-    reload(page, filter);
+      reload(page, filter);
+    } catch (err) {
+      console.error("DELETE ERROR:", err);
+    }
   };
 
   /* ---------------- PAGINATION ---------------- */
