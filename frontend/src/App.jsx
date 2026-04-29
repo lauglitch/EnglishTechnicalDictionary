@@ -66,43 +66,37 @@ function App() {
   const [authError, setAuthError] = useState(null);
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-  var token = "";
+
   /* ---------------- LOGIN ---------------- */
   const handleLogin = async () => {
-    console.log("LOGIN CLICKED");
-
     setAuthError(null);
-
-    console.log("Email:", email);
-    console.log("Password length:", password?.length);
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    console.log("Supabase response:", { data, error });
-
     if (error) {
-      console.error("Login error:", error.message);
       setAuthError(error.message);
       return;
     }
 
-    if (!data?.session) {
-      console.error("No session returned:", data);
-      return;
-    }
+    if (!data?.session) return;
 
-    token = data.session.access_token;
-
-    console.log("JWT TOKEN:", token);
-  
     setSession(data.session);
-    localStorage.setItem("access_token", token);
   };
 
-  /* ---------------- SESSION ---------------- */
+  /* ---------------- LOGOUT FIXED ---------------- */
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+
+    setSession(null);
+    setShowAdmin(false);
+    setWords([]);
+    setCurrentWord(null);
+  };
+
+  /* ---------------- SESSION (FIXED LOOP ISSUE) ---------------- */
   useEffect(() => {
     let mounted = true;
 
@@ -112,7 +106,14 @@ function App() {
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
-        if (mounted) setSession(session);
+        if (mounted) {
+          setSession(session);
+
+          // IMPORTANT FIX: prevents auto-return after logout
+          if (!session) {
+            setShowAdmin(false);
+          }
+        }
       }
     );
 
@@ -198,257 +199,281 @@ function App() {
 
   /* ---------------- UI ---------------- */
   return (
-    <div>
-      {/* ---------------- ADMIN AREA ---------------- */}
-      {showAdmin ? (
-        !session ? (
-          /* LOGIN */
-          <div
-            style={{
-              minHeight: "100vh",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: darkMode ? "#111" : "#fff",
-              padding: 16,
-              boxSizing: "border-box",
-            }}
-          >
-            <div
-              style={{
-                width: "100%",
-                maxWidth: 340,
-                padding: 20,
-                borderRadius: 10,
-                background: darkMode ? "#1a1a1a" : "#f5f5f5",
-                boxSizing: "border-box",
-              }}
-            >
-              <h2>Admin Login</h2>
-
-              <input
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={{
-                  width: "100%",
-                  marginBottom: 10,
-                  padding: 8,
-                  boxSizing: "border-box",
-                }}
-              />
-
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                style={{
-                  width: "100%",
-                  marginBottom: 10,
-                  padding: 8,
-                  boxSizing: "border-box",
-                }}
-              />
-
-              <button onClick={handleLogin} style={{ width: "100%" }}>
-                Login
-              </button>
-
-              {authError && <p style={{ color: "red" }}>{authError}</p>}
-            </div>
-          </div>
-        ) : (
-          <AdminDashboard onBack={() => setShowAdmin(false)} />
-        )
-      ) : (
-        /* ---------------- MAIN APP ---------------- */
+  <div>
+    {showAdmin ? (
+      !session ? (
         <div
           style={{
             minHeight: "100vh",
-            backgroundColor: darkMode ? "#111" : "#fff",
-            color: darkMode ? "#fff" : "#000",
             display: "flex",
+            alignItems: "center",
             justifyContent: "center",
+            background: darkMode ? "#111" : "#fff",
             padding: 16,
-            fontFamily: "Arial",
             boxSizing: "border-box",
           }}
         >
-          {/* MAIN WRAPPER */}
-          <div style={{ width: "100%", maxWidth: 900 }}>
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 340,
+              padding: 20,
+              borderRadius: 10,
+              background: darkMode ? "#1a1a1a" : "#f5f5f5",
+              boxSizing: "border-box",
+            }}
+          >
+            <h2>Admin Login</h2>
 
-            {/* HEADER (FIXED MOBILE STACK ISSUE) */}
-            <div
+            {/* BACK BUTTON (prevents login dead-end) */}
+            <button
+              onClick={() => setShowAdmin(false)}
               style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 8,
+                width: "100%",
                 marginBottom: 10,
-                textAlign: "center",
+                padding: 8,
+                background: "#444",
+                color: "#fff",
+                border: "none",
+                borderRadius: 6,
+                cursor: "pointer",
               }}
             >
-              <h1
-                style={{
-                  color: darkMode ? "#fff" : "#111",
-                  margin: 0,
-                  fontSize: "clamp(20px, 5vw, 32px)",
-                }}
-              >
-                📘 Technical Dictionary
-              </h1>
-            </div>
-                
-            {/* CONTROLS */}
-            <div
+              ← Back
+            </button>
+
+            <input
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 10,
-                marginBottom: 20,
-                justifyContent: "center",
+                width: "100%",
+                marginBottom: 10,
+                padding: 8,
+                boxSizing: "border-box",
               }}
-            >
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search word..."
-                style={{
-                  flex: "1 1 160px",
-                  minWidth: 140,
-                  padding: 8,
-                }}
-              />
+            />
 
-              <button onClick={handleSearch}>Search</button>
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={{
+                width: "100%",
+                marginBottom: 10,
+                padding: 8,
+                boxSizing: "border-box",
+              }}
+            />
 
-              <button onClick={toggleMode}>
-                {mode === "card" ? "📖 Book" : "🃏 Card"}
-              </button>
+            <button onClick={handleLogin} style={{ width: "100%" }}>
+              Login
+            </button>
 
-              <button onClick={() => setDarkMode(!darkMode)}>
-                {darkMode ? "☀️" : "🌙"}
-              </button>
-
-              <button onClick={() => setStudyMode(!studyMode)}>
-                {studyMode ? "👁️" : "👓"}
-              </button>
-
-              <button onClick={() => setShowAdmin(true)}>
-                🛠 Admin
-              </button>
-            </div>
-
-            {/* BOOK MODE */}
-            {mode === "book" ? (
-              <div style={{ width: "100%" }}>
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 6,
-                    justifyContent: "center",
-                  }}
-                >
-                  {alphabet.map((l) => (
-                    <button key={l} onClick={() => handleLetterClick(l)}>
-                      {l}
-                    </button>
-                  ))}
-                  <button onClick={handleAllClick}>All</button>
-                </div>
-
-                <div style={{ marginTop: 10 }}>
-                  {words.map((w) => (
-                    <BookItem key={w.id} word={w} darkMode={darkMode} />
-                  ))}
-                </div>
-
-                {/* PAGINATION */}
-                <div
-                  style={{
-                    marginTop: 20,
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 10,
-                    justifyContent: "center",
-                  }}
-                >
-                  <button
-                    disabled={page === 0}
-                    onClick={() => {
-                      const newPage = page - 1;
-                      activeLetter
-                        ? loadLetterPage(activeLetter, newPage)
-                        : loadPage(newPage);
-                    }}
-                  >
-                    Prev
-                  </button>
-
-                  <span>
-                    Page {page + 1} / {Math.ceil(total / PAGE_SIZE)}
-                  </span>
-
-                  <button
-                    disabled={!hasMore}
-                    onClick={() => {
-                      const newPage = page + 1;
-                      activeLetter
-                        ? loadLetterPage(activeLetter, newPage)
-                        : loadPage(newPage);
-                    }}
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            ) : (
-              /* CARD MODE */
-              <div style={{ width: "100%" }}>
-                <div
-                  style={{
-                    borderBottom: "1px solid #444",
-                    padding: 12,
-                    background: darkMode ? "#1a1a1a" : "#f7f7f7",
-                    borderRadius: 10,
-                    marginTop: 10,
-                    wordBreak: "break-word",
-                  }}
-                >
-                  {!hasSearched || !currentWord ? (
-                    <p>📘 Search a word</p>
-                  ) : (
-                    <>
-                      <h3>{currentWord.word}</h3>
-
-                      {studyMode && !revealed ? (
-                        <p onClick={() => setRevealed(true)}>
-                          Click to reveal
-                        </p>
-                      ) : (
-                        <>
-                          <p>{currentWord.definition}</p>
-                          <p><b>Example:</b> {currentWord.example}</p>
-                          <p><b>Grammar:</b> {currentWord.grammar_class}</p>
-                          <p><b>Topic:</b> {currentWord.topic}</p>
-                        </>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <p style={{ wordBreak: "break-all" , fontSize: "10px" , display: "block"}}>
-              Token: {session?.access_token}
-            </p>
+            {authError && <p style={{ color: "red" }}>{authError}</p>}
           </div>
         </div>
-      )}
-    </div>
-  );
+      ) : (
+        <>
+          <AdminDashboard onBack={() => setShowAdmin(false)} />
+
+          {/*  proper logout (prevents session rehydration bug) */}
+          <button
+            onClick={handleLogout}
+            style={{
+              position: "fixed",
+              bottom: 20,
+              right: 20,
+              padding: "10px 14px",
+              background: "red",
+              color: "#fff",
+              border: "none",
+              borderRadius: 8,
+              cursor: "pointer",
+              zIndex: 9999,
+            }}
+          >
+            Logout
+          </button>
+        </>
+      )
+    ) : (
+      <div
+        style={{
+          minHeight: "100vh",
+          backgroundColor: darkMode ? "#111" : "#fff",
+          color: darkMode ? "#fff" : "#000",
+          display: "flex",
+          justifyContent: "center",
+          padding: 16,
+          fontFamily: "Arial",
+          boxSizing: "border-box",
+        }}
+      >
+        <div style={{ width: "100%", maxWidth: 900 }}>
+
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 10,
+              textAlign: "center",
+            }}
+          >
+            <h1
+              style={{
+                color: darkMode ? "#fff" : "#111",
+                margin: 0,
+                fontSize: "clamp(20px, 5vw, 32px)",
+              }}
+            >
+              📘 Technical Dictionary
+            </h1>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 10,
+              marginBottom: 20,
+              justifyContent: "center",
+            }}
+          >
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search word..."
+              style={{
+                flex: "1 1 160px",
+                minWidth: 140,
+                padding: 8,
+              }}
+            />
+
+            <button onClick={handleSearch}>Search</button>
+
+            <button onClick={toggleMode}>
+              {mode === "card" ? "📖 Book" : "🃏 Card"}
+            </button>
+
+            <button onClick={() => setDarkMode(!darkMode)}>
+              {darkMode ? "☀️" : "🌙"}
+            </button>
+
+            <button onClick={() => setStudyMode(!studyMode)}>
+              {studyMode ? "👁️" : "👓"}
+            </button>
+
+            <button onClick={() => setShowAdmin(true)}>
+              🛠 Admin
+            </button>
+          </div>
+
+          {mode === "book" ? (
+            <div style={{ width: "100%" }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 6,
+                  justifyContent: "center",
+                }}
+              >
+                {alphabet.map((l) => (
+                  <button key={l} onClick={() => handleLetterClick(l)}>
+                    {l}
+                  </button>
+                ))}
+                <button onClick={handleAllClick}>All</button>
+              </div>
+
+              <div style={{ marginTop: 10 }}>
+                {words.map((w) => (
+                  <BookItem key={w.id} word={w} darkMode={darkMode} />
+                ))}
+              </div>
+
+              <div
+                style={{
+                  marginTop: 20,
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 10,
+                  justifyContent: "center",
+                }}
+              >
+                <button
+                  disabled={page === 0}
+                  onClick={() => {
+                    const newPage = page - 1;
+                    activeLetter
+                      ? loadLetterPage(activeLetter, newPage)
+                      : loadPage(newPage);
+                  }}
+                >
+                  Prev
+                </button>
+
+                <span>
+                  Page {page + 1} / {Math.ceil(total / PAGE_SIZE)}
+                </span>
+
+                <button
+                  disabled={!hasMore}
+                  onClick={() => {
+                    const newPage = page + 1;
+                    activeLetter
+                      ? loadLetterPage(activeLetter, newPage)
+                      : loadPage(newPage);
+                  }}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                borderBottom: "1px solid #444",
+                padding: 12,
+                background: darkMode ? "#1a1a1a" : "#f7f7f7",
+                borderRadius: 10,
+                marginTop: 10,
+                wordBreak: "break-word",
+              }}
+            >
+              {!hasSearched || !currentWord ? (
+                <p>📘 Search a word</p>
+              ) : (
+                <>
+                  <h3>{currentWord.word}</h3>
+
+                  {studyMode && !revealed ? (
+                    <p onClick={() => setRevealed(true)}>
+                      Click to reveal
+                    </p>
+                  ) : (
+                    <>
+                      <p>{currentWord.definition}</p>
+                      <p><b>Example:</b> {currentWord.example}</p>
+                      <p><b>Grammar:</b> {currentWord.grammar_class}</p>
+                      <p><b>Topic:</b> {currentWord.topic}</p>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+        </div>
+      </div>
+    )}
+  </div>
+);
 }
 
 export default App;

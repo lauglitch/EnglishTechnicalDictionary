@@ -61,8 +61,8 @@ function AdminDashboard({ onBack }) {
       }
 
       try {
-        console.log("ADMIN EMAIL USED:", session?.user?.email);
-        console.log("TOKEN BEING SENT:", session.access_token);
+        //console.log("ADMIN EMAIL USED:", session?.user?.email);
+        //console.log("TOKEN BEING SENT:", session.access_token);
 
         const res = await api.get(url, {
           signal: controller.signal,
@@ -145,7 +145,7 @@ function AdminDashboard({ onBack }) {
       <h1>Admin Dashboard</h1>
 
       <button onClick={onBack}>⬅ Back</button>
-
+     
       {!session && <p style={{ color: "red" }}>Not logged in</p>}
 
       {/* FILTERS */}

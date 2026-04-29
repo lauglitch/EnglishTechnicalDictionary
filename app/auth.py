@@ -1,52 +1,58 @@
-import jwt
 import requests
-from fastapi import Header, HTTPException, Depends
+from jose import jwt
+from fastapi import HTTPException
+import os
 
-SUPABASE_PROJECT_URL = "https://YOUR_PROJECT.supabase.co"
-JWKS_URL = f"{SUPABASE_PROJECT_URL}/auth/v1/keys"
+SUPABASE_PROJECT_URL = os.getenv("SUPABASE_PROJECT_URL")
 
-# cache keys (important for performance)
-_jwks = requests.get(JWKS_URL).json()
+JWKS_URL = f"{SUPABASE_PROJECT_URL}/auth/v1/.well-known/jwks.json"
+ISSUER = f"{SUPABASE_PROJECT_URL}/auth/v1"
+ALGORITHMS = ["ES256"]
+
+# cache JWKS (important for performance)
+_jwks_cache = None
 
 
-def get_public_key(token):
+def get_jwks():
+    global _jwks_cache
+
+    if _jwks_cache is None:
+        response = requests.get(JWKS_URL)
+        if response.status_code != 200:
+            raise Exception("Failed to fetch JWKS from Supabase")
+
+        _jwks_cache = response.json()
+
+    return _jwks_cache
+
+
+def get_signing_key(token: str):
+    jwks = get_jwks()
+
     headers = jwt.get_unverified_header(token)
-    kid = headers["kid"]
+    kid = headers.get("kid")
 
-    for key in _jwks["keys"]:
-        if key["kid"] == kid:
-            return jwt.algorithms.RSAAlgorithm.from_jwk(key)
+    for key in jwks.get("keys", []):
+        if key.get("kid") == kid:
+            return key
 
-    raise HTTPException(401, "Invalid token key")
+    raise Exception("Signing key not found for token (kid mismatch)")
 
 
-def verify_jwt(authorization: str = Header(None)):
-    if not authorization:
-        raise HTTPException(401, "Missing token")
-
-    token = authorization.replace("Bearer ", "")
-
+def verify_jwt(token: str):
     try:
-        public_key = get_public_key(token)
+        key = get_signing_key(token)
 
         payload = jwt.decode(
             token,
-            public_key,
-            algorithms=["ES256"],
-            audience="authenticated",
-            issuer=f"{SUPABASE_PROJECT_URL}/auth/v1",
+            key,
+            algorithms=ALGORITHMS,
+            issuer=ISSUER,
+            options={"verify_aud": False},  # Supabase uses 'authenticated'
         )
 
         return payload
 
     except Exception as e:
-        raise HTTPException(401, f"Invalid token: {str(e)}")
-
-
-def require_admin(user=Depends(verify_jwt)):
-    role = user.get("user_metadata", {}).get("role")
-
-    if role != "admin":
-        raise HTTPException(403, "Admin only")
-
-    return user
+        print("JWT VERIFY ERROR:", str(e))
+        raise HTTPException(status_code=401, detail="Invalid token")
