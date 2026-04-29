@@ -18,7 +18,7 @@ function Login({ onSuccess }) {
       password,
     });
 
-    //console.log("Supabase response:", { data, error });
+    console.log("Supabase response:", { data, error });
 
     setLoading(false);
 

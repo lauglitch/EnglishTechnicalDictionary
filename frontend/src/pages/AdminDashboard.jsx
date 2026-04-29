@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import api from "../api/api";
 import { supabase } from "../lib/supabase";
 
@@ -16,18 +16,13 @@ function AdminDashboard({ onBack }) {
     filter: "all",
   });
 
-  const getToken = useCallback(() => session?.access_token || null, [session]);
-
   /* ---------------- SESSION ---------------- */
   useEffect(() => {
     let mounted = true;
 
     const initSession = async () => {
-      const { data, error } = await supabase.auth.getSession();
-
-      if (!error && mounted) {
-        setSession(data.session);
-      }
+      const { data } = await supabase.auth.getSession();
+      if (mounted) setSession(data.session);
     };
 
     initSession();
@@ -44,6 +39,8 @@ function AdminDashboard({ onBack }) {
     };
   }, []);
 
+  const getToken = () => session?.access_token?.trim() || null;
+
   /* ---------------- FETCH ---------------- */
   useEffect(() => {
     const token = getToken();
@@ -55,15 +52,11 @@ function AdminDashboard({ onBack }) {
       const skip = query.page * PAGE_SIZE;
 
       let url = `/admin?skip=${skip}&limit=${PAGE_SIZE}`;
-
       if (query.filter !== "all") {
         url += `&status=${query.filter}`;
       }
 
       try {
-        //console.log("ADMIN EMAIL USED:", session?.user?.email);
-        //console.log("TOKEN BEING SENT:", session.access_token);
-
         const res = await api.get(url, {
           signal: controller.signal,
           headers: {
@@ -77,15 +70,16 @@ function AdminDashboard({ onBack }) {
         setPage(query.page);
         setFilter(query.filter);
       } catch (err) {
-        if (err?.name === "CanceledError" || err?.code === "ERR_CANCELED") return;
-        console.error("ADMIN FETCH ERROR:", err);
+        if (err.name !== "CanceledError") {
+          console.error("ADMIN FETCH ERROR:", err);
+        }
       }
     };
 
     fetchWords();
 
     return () => controller.abort();
-  }, [session, query.page, query.filter, getToken]);
+  }, [session, query]);
 
   /* ---------------- RELOAD ---------------- */
   const reload = (newPage = page, newFilter = filter) => {
@@ -136,7 +130,6 @@ function AdminDashboard({ onBack }) {
     }
   };
 
-  /* ---------------- PAGINATION ---------------- */
   const hasMore = (page + 1) * PAGE_SIZE < total;
 
   /* ---------------- UI ---------------- */
@@ -145,8 +138,12 @@ function AdminDashboard({ onBack }) {
       <h1>Admin Dashboard</h1>
 
       <button onClick={onBack}>⬅ Back</button>
-     
-      {!session && <p style={{ color: "red" }}>Not logged in</p>}
+
+      {!session && (
+        <p style={{ color: "red" }}>
+          Loading session...
+        </p>
+      )}
 
       {/* FILTERS */}
       <div style={{ marginBottom: 20 }}>

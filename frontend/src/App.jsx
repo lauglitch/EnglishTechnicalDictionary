@@ -87,14 +87,13 @@ function App() {
   };
 
   /* ---------------- LOGOUT FIXED ---------------- */
-  const handleLogout = async () => {
+ const handleLogout = async () => {
     await supabase.auth.signOut();
-
+    localStorage.removeItem("access_token");
     setSession(null);
     setShowAdmin(false);
-    setWords([]);
-    setCurrentWord(null);
   };
+  
 
   /* ---------------- SESSION (FIXED LOOP ISSUE) ---------------- */
   useEffect(() => {

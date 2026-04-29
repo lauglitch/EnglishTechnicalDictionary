@@ -1,33 +1,45 @@
-from fastapi import Depends, HTTPException, Header
+from fastapi import HTTPException, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt
 import requests
 import os
 
 SUPABASE_PROJECT_URL = os.getenv("SUPABASE_PROJECT_URL")
+
 SUPABASE_ISSUER = f"{SUPABASE_PROJECT_URL}/auth/v1"
 
 JWKS_URL = f"{SUPABASE_PROJECT_URL}/auth/v1/.well-known/jwks.json"
 
+security = HTTPBearer()
+
 
 def get_jwks():
-    response = requests.get(JWKS_URL)
-
-    if response.status_code != 200:
-        raise Exception("Failed to fetch JWKS")
-
-    return response.json()
-
-
-def get_current_user(authorization: str = Header(...)):
     try:
-        token = authorization.split(" ")[1]
+        r = requests.get(JWKS_URL, timeout=10)
+        r.raise_for_status()
+        return r.json()
+    except Exception as e:
+        print("JWKS fetch error:", e)
+        raise HTTPException(status_code=500, detail="Cannot fetch JWKS")
 
-        jwks = get_jwks()
 
+JWKS = get_jwks()
+
+
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+
+    try:
         headers = jwt.get_unverified_header(token)
-        kid = headers["kid"]
+        kid = headers.get("kid")
 
-        key = next(k for k in jwks["keys"] if k["kid"] == kid)
+        if not kid:
+            raise HTTPException(status_code=401, detail="Missing kid in token")
+
+        key = next((k for k in JWKS.get("keys", []) if k.get("kid") == kid), None)
+
+        if not key:
+            raise HTTPException(status_code=401, detail="JWKS key not found")
 
         payload = jwt.decode(
             token,
