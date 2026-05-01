@@ -22,13 +22,17 @@ function AdminDashboard({ onBack }) {
 
     const initSession = async () => {
       const { data } = await supabase.auth.getSession();
-      if (mounted) setSession(data.session);
+      if (mounted) {
+        console.log("🟢 SESSION INIT:", data.session);
+        setSession(data.session);
+      }
     };
 
     initSession();
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, newSession) => {
+        console.log("🔵 SESSION CHANGE:", newSession);
         if (mounted) setSession(newSession);
       }
     );
@@ -43,8 +47,17 @@ function AdminDashboard({ onBack }) {
 
   /* ---------------- FETCH ---------------- */
   useEffect(() => {
+    if (!session) {
+      console.log("⛔ NO SESSION YET");
+      return;
+    }
+
     const token = getToken();
-    if (!token) return;
+
+    if (!token) {
+      console.log("⛔ NO TOKEN");
+      return;
+    }
 
     const controller = new AbortController();
 
@@ -56,6 +69,8 @@ function AdminDashboard({ onBack }) {
         url += `&status=${query.filter}`;
       }
 
+      console.log("🚀 FETCH:", url);
+
       try {
         const res = await api.get(url, {
           signal: controller.signal,
@@ -64,14 +79,21 @@ function AdminDashboard({ onBack }) {
           },
         });
 
-        setWords(res.data?.items ?? []);
-        setTotal(res.data?.total ?? 0);
+        console.log("📦 RESPONSE:", res.data);
+
+        const items = res.data?.items ?? [];
+        const total = res.data?.total ?? 0;
+
+        console.log("📄 ITEMS:", items.length);
+
+        setWords(items);
+        setTotal(total);
 
         setPage(query.page);
         setFilter(query.filter);
       } catch (err) {
         if (err.name !== "CanceledError") {
-          console.error("ADMIN FETCH ERROR:", err);
+          console.error("❌ ADMIN FETCH ERROR:", err);
         }
       }
     };
@@ -95,8 +117,7 @@ function AdminDashboard({ onBack }) {
     if (!token) return;
 
     try {
-      await api.patch(
-        `/admin/${id}/status?status=${status}`,
+      await api.patch(`/admin/${id}/status?status=${status}`,
         {},
         {
           headers: {
@@ -162,28 +183,32 @@ function AdminDashboard({ onBack }) {
       </div>
 
       {/* WORD LIST */}
-      {(words || []).map((w) => (
-        <div
-          key={w.id}
-          style={{ borderBottom: "1px solid #ccc", padding: 10 }}
-        >
-          <h3>{w.word}</h3>
-          <p>{w.definition}</p>
-          <p>Status: {w.status}</p>
+      {words.length === 0 ? (
+        <p>No data</p>
+      ) : (
+        words.map((w) => (
+          <div
+            key={w.id}
+            style={{ borderBottom: "1px solid #ccc", padding: 10 }}
+          >
+            <h3>{w.word}</h3>
+            <p>{w.definition}</p>
+            <p>Status: {w.status}</p>
 
-          <button onClick={() => updateStatus(w.id, "approved")}>
-            Approve
-          </button>
+            <button onClick={() => updateStatus(w.id, "approved")}>
+              Approve
+            </button>
 
-          <button onClick={() => updateStatus(w.id, "rejected")}>
-            Reject
-          </button>
+            <button onClick={() => updateStatus(w.id, "rejected")}>
+              Reject
+            </button>
 
-          <button onClick={() => deleteWord(w.word)}>
-            Delete
-          </button>
-        </div>
-      ))}
+            <button onClick={() => deleteWord(w.word)}>
+              Delete
+            </button>
+          </div>
+        ))
+      )}
 
       {/* PAGINATION */}
       <div style={{ marginTop: 20 }}>

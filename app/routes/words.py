@@ -7,7 +7,6 @@ from app.database import SessionLocal
 
 from app.auth.dependencies import get_current_user
 
-
 router = APIRouter(prefix="/words", tags=["words"])
 
 
@@ -47,6 +46,35 @@ def verify_admin(user: dict):
         return
 
     raise HTTPException(status_code=403, detail="Not admin")
+
+
+@router.get("/admin")
+def get_admin_words(
+    skip: int = 0,
+    limit: int = 10,
+    status: str = "all",
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    verify_admin(user)
+
+    query = db.query(models.Word)
+
+    # normalize DB filtering (VERY IMPORTANT)
+    if status != "all":
+        query = query.filter(func.lower(models.Word.status) == status.lower().strip())
+
+    total = query.count()
+
+    items = query.order_by(models.Word.id.desc()).offset(skip).limit(limit).all()
+
+    print("ADMIN TOTAL:", total)
+    print("ADMIN ITEMS:", len(items))
+
+    return {
+        "items": items,
+        "total": total,
+    }
 
 
 # -------------------------
