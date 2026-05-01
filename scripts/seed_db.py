@@ -13,13 +13,13 @@ def seed_database():
     with open(DB_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    print(f"📦 Loading {len(data)} words...")
+    # print(f"Loading {len(data)} words...")
 
     for item in data:
         exists = db.query(Word).filter(Word.word == item["word"]).first()
 
         if exists:
-            print(f"⚠️ Skipping existing word: {item['word']}")
+            print(f"Skipping existing word: {item['word']}")
             continue
 
         word = Word(
@@ -38,7 +38,7 @@ def seed_database():
     db.commit()
     db.close()
 
-    print("✅ Database seeded successfully")
+    print("Database seeded successfully")
 
 
 if __name__ == "__main__":

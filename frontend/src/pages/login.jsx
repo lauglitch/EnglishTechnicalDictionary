@@ -11,14 +11,14 @@ function Login({ onSuccess }) {
     setLoading(true);
     setError(null);
 
-    //console.log("Trying login with:", email);
+    // console.log("Trying login with:", email);
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    console.log("Supabase response:", { data, error });
+    // console.log("Supabase response:", { data, error });
 
     setLoading(false);
 

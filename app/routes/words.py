@@ -60,7 +60,7 @@ def get_admin_words(
 
     query = db.query(models.Word)
 
-    # normalize DB filtering (VERY IMPORTANT)
+    # normalize DB filtering
     if status != "all":
         query = query.filter(func.lower(models.Word.status) == status.lower().strip())
 
@@ -68,8 +68,8 @@ def get_admin_words(
 
     items = query.order_by(models.Word.id.desc()).offset(skip).limit(limit).all()
 
-    print("ADMIN TOTAL:", total)
-    print("ADMIN ITEMS:", len(items))
+    # ("ADMIN TOTAL:", total)
+    # print("ADMIN ITEMS:", len(items))
 
     return {
         "items": items,

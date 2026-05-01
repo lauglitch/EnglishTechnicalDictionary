@@ -11,7 +11,6 @@ from app.database import engine
 from app import models
 from app.routes import words, users
 
-
 # Create tables (only if they don't exist)
 models.Base.metadata.create_all(bind=engine)
 
@@ -33,8 +32,8 @@ app.add_middleware(
 
 @app.middleware("http")
 async def debug_middleware(request, call_next):
-    print("REQUEST PATH:", request.url.path)
-    print("HEADERS:", dict(request.headers))
+    # print("REQUEST PATH:", request.url.path)
+    # print("HEADERS:", dict(request.headers))
 
     response = await call_next(request)
 
@@ -48,7 +47,7 @@ app.include_router(users.router)
 
 SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 
-print("SECRET LOADED:", SUPABASE_JWT_SECRET is not None)
+# print("SECRET LOADED:", SUPABASE_JWT_SECRET is not None)
 
 
 @app.get("/test")
@@ -76,4 +75,4 @@ def corscheck():
 # Startup log
 @app.on_event("startup")
 async def startup_event():
-    print("✅ FastAPI started and database ready")
+    print("FastAPI started and database ready")

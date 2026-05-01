@@ -43,7 +43,6 @@ def create_word(db: Session, word: schemas.WordCreate, user_id: int):
             topic=word.topic,
             author_id=user_id,
             grammar_class=word.grammar_class,
-            # 👇 ONLY FIELD YOU USE
             status=status,
             created_at=datetime.utcnow(),
         )

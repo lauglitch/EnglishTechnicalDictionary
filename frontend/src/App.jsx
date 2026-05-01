@@ -108,7 +108,7 @@ function App() {
         if (mounted) {
           setSession(session);
 
-          // IMPORTANT FIX: prevents auto-return after logout
+          // Prevents auto-return after logout
           if (!session) {
             setShowAdmin(false);
           }

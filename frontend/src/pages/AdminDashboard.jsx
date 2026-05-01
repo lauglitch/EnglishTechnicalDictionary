@@ -23,7 +23,7 @@ function AdminDashboard({ onBack }) {
     const initSession = async () => {
       const { data } = await supabase.auth.getSession();
       if (mounted) {
-        console.log("🟢 SESSION INIT:", data.session);
+        // console.log("SESSION INIT:", data.session);
         setSession(data.session);
       }
     };
@@ -32,7 +32,7 @@ function AdminDashboard({ onBack }) {
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, newSession) => {
-        console.log("🔵 SESSION CHANGE:", newSession);
+        // console.log("SESSION CHANGE:", newSession);
         if (mounted) setSession(newSession);
       }
     );
@@ -47,15 +47,10 @@ function AdminDashboard({ onBack }) {
 
   /* ---------------- FETCH ---------------- */
   useEffect(() => {
-    if (!session) {
-      console.log("⛔ NO SESSION YET");
-      return;
-    }
-
     const token = getToken();
 
     if (!token) {
-      console.log("⛔ NO TOKEN");
+      console.log("ERROR: NO TOKEN");
       return;
     }
 
@@ -69,7 +64,7 @@ function AdminDashboard({ onBack }) {
         url += `&status=${query.filter}`;
       }
 
-      console.log("🚀 FETCH:", url);
+      // console.log("FETCH:", url);
 
       try {
         const res = await api.get(url, {
@@ -79,12 +74,12 @@ function AdminDashboard({ onBack }) {
           },
         });
 
-        console.log("📦 RESPONSE:", res.data);
+        // console.log("RESPONSE:", res.data);
 
         const items = res.data?.items ?? [];
         const total = res.data?.total ?? 0;
 
-        console.log("📄 ITEMS:", items.length);
+        // console.log("ITEMS:", items.length);
 
         setWords(items);
         setTotal(total);
@@ -93,7 +88,7 @@ function AdminDashboard({ onBack }) {
         setFilter(query.filter);
       } catch (err) {
         if (err.name !== "CanceledError") {
-          console.error("❌ ADMIN FETCH ERROR:", err);
+          console.error("ADMIN FETCH ERROR:", err);
         }
       }
     };
