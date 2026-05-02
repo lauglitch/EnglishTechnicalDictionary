@@ -6,7 +6,7 @@ const api = axios.create({
 });
 
 /* -------------------------
-   AUTH INTERCEPTOR (FIXED)
+   AUTH INTERCEPTOR
 ------------------------- */
 api.interceptors.request.use(async (config) => {
   const { data } = await supabase.auth.getSession();

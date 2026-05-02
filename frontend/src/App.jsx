@@ -139,6 +139,7 @@ function App() {
       setHasSearched(true);
       setMode("card");
       setRevealed(false);
+
     } catch {
       alert("Word not found");
     }
@@ -149,11 +150,12 @@ function App() {
     const skip = pageNumber * PAGE_SIZE;
 
     const res = await api.get(`/?skip=${skip}&limit=${PAGE_SIZE}`);
-
+    
     setWords(res.data.items);
     setTotal(res.data.total);
     setPage(pageNumber);
     setActiveLetter(null);
+
   };
 
   const loadLetterPage = async (letter, pageNumber = 0) => {
@@ -166,6 +168,7 @@ function App() {
     setWords(res.data.items);
     setTotal(res.data.total);
     setPage(pageNumber);
+
   };
 
   const handleLetterClick = (letter) => {
@@ -175,6 +178,7 @@ function App() {
 
   const handleAllClick = () => {
     setActiveLetter(null);
+    setPage(0);
     loadPage(0);
   };
 
@@ -182,12 +186,18 @@ function App() {
 
   /* ---------------- MODE SWITCH ---------------- */
   const toggleMode = async () => {
+    setMode("book");
+    setWords([]); // prevents A flash
+    loadPage(0);
+
     if (mode === "card") {
       await loadPage(0);
-      setActiveLetter("A");
+
+      setActiveLetter(null); // no forced "A"
       setPage(0);
       setMode("book");
-      loadLetterPage("A", 0);
+
+      loadPage(0); // load ALL instead of letter A
     } else {
       setMode("card");
       setWords([]);
@@ -196,6 +206,7 @@ function App() {
     }
   };
 
+  
   /* ---------------- UI ---------------- */
   return (
   <div>
@@ -275,7 +286,7 @@ function App() {
         </div>
       ) : (
         <>
-          <AdminDashboard onBack={() => setShowAdmin(false)} />
+          <AdminDashboard onBack={() => setShowAdmin(false)} darkMode={darkMode} />
 
           {/*  proper logout (prevents session rehydration bug) */}
           <button
@@ -363,8 +374,8 @@ function App() {
               {darkMode ? "☀️" : "🌙"}
             </button>
 
-            <button onClick={() => setStudyMode(!studyMode)}>
-              {studyMode ? "👁️" : "👓"}
+            <button onClick={() => { console.log(studyMode); setStudyMode(!studyMode); setRevealed(false); }}>
+              {studyMode ? "👓" : "👁️"}
             </button>
 
             <button onClick={() => setShowAdmin(true)}>
@@ -451,16 +462,46 @@ function App() {
                 <>
                   <h3>{currentWord.word}</h3>
 
-                  {studyMode && !revealed ? (
-                    <p onClick={() => setRevealed(true)}>
-                      Click to reveal
-                    </p>
+                  {studyMode ? (
+                    <>
+                      {!revealed ? (
+                        <p
+                          onClick={() => setRevealed(true)}
+                          style={{ cursor: "pointer" }}
+                        >
+                          Click to reveal
+                        </p>
+                      ) : (
+                        <>
+                          <p
+                            onClick={() => setRevealed(false)}
+                            style={{ cursor: "pointer" }}
+                          >
+                            Click to hide
+                          </p>
+
+                          <p style={{ padding: 12 }}>{currentWord.definition}</p>
+
+                          <p><b>Example:</b> {currentWord.example}</p>
+                          <p><b>Grammar:</b> {currentWord.grammar_class}</p>
+                          <p><b>Topic:</b> {currentWord.topic}</p>
+                          <p><b>Author:</b> {currentWord.author}</p>
+                        </>
+                      )}
+                    </>
                   ) : (
                     <>
-                      <p>{currentWord.definition}</p>
-                      <p><b>Example:</b> {currentWord.example}</p>
-                      <p><b>Grammar:</b> {currentWord.grammar_class}</p>
-                      <p><b>Topic:</b> {currentWord.topic}</p>
+                      {/* studyMode OFF → ALWAYS show content */}
+                      <>
+                        <>
+                          <p style={{ padding: 12 }}>{currentWord.definition}</p>
+
+                          <p><b>Example:</b> {currentWord.example}</p>
+                          <p><b>Grammar:</b> {currentWord.grammar_class}</p>
+                          <p><b>Topic:</b> {currentWord.topic}</p>
+                          <p><b>Author:</b> {currentWord.author}</p>
+                        </>
+                      </>
                     </>
                   )}
                 </>

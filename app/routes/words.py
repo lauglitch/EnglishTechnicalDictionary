@@ -2,6 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
+from fastapi.encoders import jsonable_encoder
+
+
 from app import schemas, crud, models
 from app.database import SessionLocal
 
@@ -48,6 +51,9 @@ def verify_admin(user: dict):
     raise HTTPException(status_code=403, detail="Not admin")
 
 
+# -------------------------
+# ADMIN WORDS
+# -------------------------
 @router.get("/admin")
 def get_admin_words(
     skip: int = 0,
@@ -60,19 +66,18 @@ def get_admin_words(
 
     query = db.query(models.Word)
 
-    # normalize DB filtering
     if status != "all":
-        query = query.filter(func.lower(models.Word.status) == status.lower().strip())
+        query = query.filter(models.Word.status == status)
+
+    # CRITICAL: stable global order
+    query = query.order_by(func.lower(models.Word.word).asc(), models.Word.id.asc())
 
     total = query.count()
 
-    items = query.order_by(models.Word.id.desc()).offset(skip).limit(limit).all()
-
-    # ("ADMIN TOTAL:", total)
-    # print("ADMIN ITEMS:", len(items))
+    items = query.offset(skip).limit(limit).all()
 
     return {
-        "items": items,
+        "items": jsonable_encoder(items),
         "total": total,
     }
 
@@ -81,13 +86,27 @@ def get_admin_words(
 # PUBLIC WORDS
 # -------------------------
 @router.get("/")
-def get_all_words(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
-    query = db.query(models.Word).filter(models.Word.status == "approved")
+def get_all_words(
+    skip: int = 0,
+    limit: int = 10,
+    status: str = "approved",
+    db: Session = Depends(get_db),
+):
+    query = db.query(models.Word)
+
+    if status != "all":
+        query = query.filter(models.Word.status == status)
+
+    query = query.order_by(func.lower(models.Word.word).asc(), models.Word.id.asc())
 
     total = query.count()
-    items = query.order_by(models.Word.id.desc()).offset(skip).limit(limit).all()
 
-    return {"items": items, "total": total}
+    items = query.offset(skip).limit(limit).all()
+
+    return {
+        "items": jsonable_encoder(items),
+        "total": total,
+    }
 
 
 # -------------------------
@@ -108,10 +127,16 @@ def get_words_by_letter(
         func.lower(models.Word.word).startswith(letter.lower()),
     )
 
+    query = query.order_by(func.lower(models.Word.word).asc(), models.Word.id.asc())
+
     total = query.count()
+
     items = query.offset(skip).limit(limit).all()
 
-    return {"items": items, "total": total}
+    return {
+        "items": jsonable_encoder(items),
+        "total": total,
+    }
 
 
 # -------------------------
