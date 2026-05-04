@@ -86,7 +86,7 @@ function App() {
     setSession(data.session);
   };
 
-  /* ---------------- LOGOUT FIXED ---------------- */
+  /* ---------------- LOGOUT  ---------------- */
  const handleLogout = async () => {
     await supabase.auth.signOut();
     localStorage.removeItem("access_token");
@@ -95,7 +95,7 @@ function App() {
   };
   
 
-  /* ---------------- SESSION (FIXED LOOP ISSUE) ---------------- */
+  /* ---------------- SESSION ---------------- */
   useEffect(() => {
     let mounted = true;
 
@@ -286,26 +286,12 @@ function App() {
         </div>
       ) : (
         <>
-          <AdminDashboard onBack={() => setShowAdmin(false)} darkMode={darkMode} />
+          <AdminDashboard
+            onBack={() => setShowAdmin(false)}
+            onLogout={handleLogout}
+            darkMode={darkMode}
+          />
 
-          {/*  proper logout (prevents session rehydration bug) */}
-          <button
-            onClick={handleLogout}
-            style={{
-              position: "fixed",
-              bottom: 20,
-              right: 20,
-              padding: "10px 14px",
-              background: "red",
-              color: "#fff",
-              border: "none",
-              borderRadius: 8,
-              cursor: "pointer",
-              zIndex: 9999,
-            }}
-          >
-            Logout
-          </button>
         </>
       )
     ) : (

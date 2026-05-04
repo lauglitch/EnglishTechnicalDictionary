@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabase";
 
 const PAGE_SIZE = 10;
 
-function AdminDashboard({ onBack, darkMode }) {
+function AdminDashboard({ onBack, onLogout = () => {}, darkMode }) {
   const [words, setWords] = useState([]);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
@@ -16,12 +16,15 @@ function AdminDashboard({ onBack, darkMode }) {
     filter: "all",
   });
 
-  /* ---------------- SEARCH (NEW) ---------------- */
+  /* ---------------- SEARCH ---------------- */
   const [search, setSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
 
-  const filteredWords = words.filter((w) =>
-    w.word.toLowerCase().includes(search.toLowerCase())
-  );
+  const displayedWords = appliedSearch
+    ? words.filter(
+        (w) => w.word.toLowerCase() === appliedSearch.toLowerCase()
+      )
+    : words;
 
   /* ---------------- SESSION ---------------- */
   useEffect(() => {
@@ -60,6 +63,7 @@ function AdminDashboard({ onBack, darkMode }) {
       const skip = query.page * PAGE_SIZE;
 
       let url = `/admin?skip=${skip}&limit=${PAGE_SIZE}`;
+
       if (query.filter !== "all") {
         url += `&status=${query.filter}`;
       }
@@ -74,7 +78,7 @@ function AdminDashboard({ onBack, darkMode }) {
 
         const items = res.data?.items ?? [];
         const total = res.data?.total ?? 0;
-        
+
         setWords(items);
         setTotal(total);
 
@@ -92,12 +96,6 @@ function AdminDashboard({ onBack, darkMode }) {
     return () => controller.abort();
   }, [session, query]);
 
-  /* ---------------- PAGE SCROLL EFFECT -------------- */
-  useEffect(() => {
-    if (session) {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  }, [page]);
   /* ---------------- RELOAD ---------------- */
   const reload = (newPage = page, newFilter = filter) => {
     setQuery({
@@ -143,132 +141,156 @@ function AdminDashboard({ onBack, darkMode }) {
 
   /* ---------------- UI ---------------- */
   return (
-  <div
-    style={{
-      padding: 20,
-      background: darkMode ? "#111" : "#fff",
-      minHeight: "100vh",
-      color: darkMode ? "#fff" : "#000",
-    }}
-  >
-    <h1 style={{ color: darkMode ? "#fff" : "#000" }}>
-      Admin Dashboard
-    </h1>
+    <div>
+      <h1 style={{ color: darkMode ? "#fff" : "#000", textAlign: "center" }}>
+        Admin Dashboard
+      </h1>
 
-    <button onClick={onBack} style={{ marginBottom: 15 }}>
-      ⬅ Back
-    </button>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 15,
+        }}
+      >
+        <button onClick={onBack}>
+          ⬅ Back
+        </button>
 
-    {!session && (
-      <p style={{ color: "red" }}>Loading session...</p>
-    )}
-
-    {/* FILTERS */}
-    <div
-      style={{
-        marginBottom: 20,
-        display: "flex",
-        justifyContent: "center",
-        gap: 10,
-        flexWrap: "wrap",
-      }}
-    >
-      {["all", "pending", "approved", "rejected"].map((f) => (
         <button
-          key={f}
-          onClick={() => reload(0, f)}
+          onClick={onLogout}
           style={{
-            fontWeight: filter === f ? "bold" : "normal",
-            minWidth: 90,
-            textAlign: "center",
-            background: darkMode ? "#222" : "#eee",
-            color: darkMode ? "#fff" : "#000",
-            border: "1px solid #444",
-            padding: "6px",
-            borderRadius: "6px",
+            background: "red",
+            color: "#fff",
+            border: "none",
+            padding: "6px 12px",
+            borderRadius: 6,
             cursor: "pointer",
           }}
         >
-          {f.charAt(0).toUpperCase() + f.slice(1)}
+          Logout
         </button>
-      ))}
-    </div>
+      </div>
 
-    {/* SEARCH */}
-    <div style={{ marginBottom: 15 }}>
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search word..."
+      {!session && <p style={{ color: "red" }}>Loading session...</p>}
+
+      {/* FILTERS */}
+      <div
         style={{
-          padding: 6,
-          marginRight: 8,
-          background: darkMode ? "#222" : "#fff",
-          color: darkMode ? "#fff" : "#000",
-          border: "1px solid #555",
-        }}
-      />
-      <button
-        onClick={() => setSearch("")}
-        style={{
-          background: darkMode ? "#222" : "#eee",
-          color: darkMode ? "#fff" : "#000",
+          marginBottom: 20,
+          display: "flex",
+          justifyContent: "center",
+          gap: 10,
+          flexWrap: "wrap",
         }}
       >
-        Clear
-      </button>
-    </div>
+        {["All", "Pending", "Approved", "Rejected"].map((f) => (
+          <button
+            key={f}
+            onClick={() => reload(0, f.toLowerCase())}
+            style={{
+              fontWeight: filter === f.toLowerCase() ? "bold" : "normal",
+              minWidth: 90,
+              textAlign: "center",
+            }}
+          >
+            {f}
+          </button>
+        ))}
+      </div>
 
-    {/* WORD LIST */}
-    {filteredWords.length === 0 ? (
-      <p>No data</p>
-    ) : (
-      filteredWords.map((w) => (
-        <div
-          key={w.id}
-          style={{
-            borderBottom: "1px solid #444",
-            padding: 10,
-            color: darkMode ? "#fff" : "#000",
+      {/* SEARCH */}
+      <div
+        style={{
+          marginBottom: 15,
+          display: "flex",
+          justifyContent: "center",
+          gap: 10,
+          flexWrap: "wrap",
+          alignItems: "center",
+        }}
+      >
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search word..."
+          style={{ padding: 6, marginRight: 8 }}
+        />
+
+        <button onClick={() => setAppliedSearch(search)}>
+          Search
+        </button>
+
+        <button
+          onClick={() => {
+            setSearch("");
+            setAppliedSearch("");
           }}
         >
-          <h3>{w.word}</h3>
-          <p>{w.definition}</p>
-          <p>Status: {w.status}</p>
+          Clear
+        </button>
+      </div>
 
-          <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-            <button onClick={() => updateStatus(w.id, "approved")}>
-              Approve
-            </button>
+      {/* WORD LIST */}
+      {appliedSearch ? (
+        displayedWords.length === 1 ? (
+          displayedWords.map((w) => (
+            <div key={w.id} style={{ borderBottom: "1px solid #ccc", padding: 10 }}>
+              <h3>{w.word}</h3>
+              <p>{w.definition}</p>
+              <p>Status: {w.status}</p>
+            </div>
+          ))
+        ) : (
+          <p>No data found</p>
+        )
+      ) : words.length === 0 ? (
+        <p>No data</p>
+      ) : (
+        words.map((w) => (
+          <div key={w.id} style={{ borderBottom: "1px solid #ccc", padding: 10 }}>
+            <h3>{w.word}</h3>
+            <p>{w.definition}</p>
+            <p>Status: {w.status}</p>
 
-            <button onClick={() => updateStatus(w.id, "rejected")}>
-              Reject
-            </button>
+            <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+              <button onClick={() => updateStatus(w.id, "approved")}>
+                Approve
+              </button>
 
-            <button onClick={() => deleteWord(w.word)}>
-              Delete
-            </button>
+              <button onClick={() => updateStatus(w.id, "rejected")}>
+                Reject
+              </button>
+
+              <button onClick={() => deleteWord(w.word)}>
+                Delete
+              </button>
+            </div>
           </div>
+        ))
+      )}
+
+      {/* PAGINATION */}
+      {!appliedSearch && (
+        <div style={{ marginTop: 20 }}>
+          <button disabled={page === 0} onClick={() => reload(page - 1, filter)}>
+            Prev
+          </button>
+
+          <span style={{ margin: "0 10px" }}>
+            Showing {words.length} / {total} — Page {page + 1} /{" "}
+            {Math.ceil(total / PAGE_SIZE)}
+          </span>
+
+          <button disabled={!hasMore} onClick={() => reload(page + 1, filter)}>
+            Next
+          </button>
         </div>
-      ))
-    )}
-
-    {/* PAGINATION */}
-    <div style={{ marginTop: 20 }}>
-      <button disabled={page === 0} onClick={() => reload(page - 1, filter)}>
-        Prev
-      </button>
-
-      <span style={{ margin: "0 10px" }}>
-        Showing {filteredWords.length} / {total} — Page {page + 1} / {Math.ceil(total / PAGE_SIZE)}
-      </span>
-
-      <button disabled={!hasMore} onClick={() => reload(page + 1, filter)}>
-        Next
-      </button>
+      )}
     </div>
-  </div>
-);
+  );
 }
 
 export default AdminDashboard;
