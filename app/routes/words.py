@@ -131,6 +131,7 @@ def create_word(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
+    verify_admin(user)
     return crud.create_word(db, word, user_id=user.get("sub"))
 
 
@@ -143,6 +144,7 @@ def submit_word(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
+    verify_admin(user)
     new_word = crud.create_word(db, word, user_id=user.get("sub"))
 
     if not new_word:
@@ -165,6 +167,7 @@ def patch_word(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
+    verify_admin(user)
     updated = crud.update_word_fields(db, word_str, word_data.dict(exclude_unset=True))
 
     if not updated:
@@ -182,6 +185,8 @@ def delete_word(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
+    verify_admin(user)
+
     deleted = crud.delete_word_by_name(db, word_str)
 
     if not deleted:
