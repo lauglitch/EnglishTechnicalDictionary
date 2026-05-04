@@ -380,11 +380,37 @@ function App() {
                 }}
               >
                 {alphabet.map((l) => (
-                  <button key={l} onClick={() => handleLetterClick(l)}>
+                  <button
+                    key={l}
+                    onClick={() => handleLetterClick(l)}
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: 0,
+                      lineHeight: 1,
+                      WebkitAppearance: "none",
+                      appearance: "none",
+                    }}
+                  >
                     {l}
                   </button>
                 ))}
-                <button onClick={handleAllClick}>All</button>
+                <button
+                  onClick={handleAllClick}
+                  style={{
+                    width: 60,
+                    height: 40,
+                    borderRadius: 20,
+                    WebkitAppearance: "none",
+                    appearance: "none",
+                  }}
+                >
+                  All
+                </button>
               </div>
 
               <div style={{ marginTop: 10 }}>
