@@ -34,7 +34,7 @@ def verify_admin(user: dict):
 
 
 # =========================================================
-# PUBLIC WORDS (ONLY APPROVED)
+# PUBLIC WORDS (only approved)
 # =========================================================
 @router.get("/")
 def get_all_words(
@@ -87,7 +87,7 @@ def submit_word(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    # ❗ NO insert into Word table directly
+    # NO insert into Word table directly
     submission = crud.create_word_submission(
         db,
         word,
@@ -100,6 +100,35 @@ def submit_word(
     return {
         "message": "Submitted for review",
         "status": "pending",
+    }
+
+
+# =========================================================
+# ADMIN: GET ALL WORDS (including: approved, pending and rejected )
+# =========================================================
+@router.get("/admin")
+def get_admin_words(
+    skip: int = 0,
+    limit: int = 10,
+    status: str = "all",
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    verify_admin(user)
+
+    query = db.query(models.Word)
+
+    if status != "all":
+        query = query.filter(models.Word.status == status)
+
+    query = query.order_by(func.lower(models.Word.word).asc(), models.Word.id.asc())
+
+    total = query.count()
+    items = query.offset(skip).limit(limit).all()
+
+    return {
+        "items": jsonable_encoder(items),
+        "total": total,
     }
 
 
