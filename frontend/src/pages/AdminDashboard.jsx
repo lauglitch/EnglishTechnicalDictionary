@@ -42,7 +42,7 @@ function AdminDashboard({ onBack, onLogout = () => {}, darkMode }) {
         if (mounted) setSession(newSession);
       }
     );
-
+    
     return () => {
       mounted = false;
       listener?.subscription?.unsubscribe?.();
@@ -54,7 +54,7 @@ function AdminDashboard({ onBack, onLogout = () => {}, darkMode }) {
   /* ---------------- FETCH ---------------- */
   useEffect(() => {
     const token = session?.access_token;
-
+    console.log(token)
     if (!session || !token) return;
 
     const controller = new AbortController();
