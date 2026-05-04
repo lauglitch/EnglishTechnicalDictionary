@@ -25,30 +25,13 @@ def get_db():
 
 
 # -------------------------
-# ADMIN CHECK (ROBUST)
+# ADMIN CHECK
 # -------------------------
 def verify_admin(user: dict):
-    """
-    More robust admin check:
-    - supports Supabase custom role
-    - fallback to email-based admin
-    """
+    role = user.get("app_metadata", {}).get("role")
 
-    email = (user.get("email") or "").lower()
-
-    role = user.get("app_metadata", {}).get("role") or user.get(
-        "user_metadata", {}
-    ).get("role")
-
-    admin_email = "youradmin@email.com"  # fallback safety
-
-    if role == "admin":
-        return
-
-    if email == admin_email:
-        return
-
-    raise HTTPException(status_code=403, detail="Not admin")
+    if role != "admin":
+        raise HTTPException(status_code=403, detail="Not admin")
 
 
 # -------------------------
