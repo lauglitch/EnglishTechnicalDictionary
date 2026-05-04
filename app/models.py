@@ -50,3 +50,19 @@ class UserProgress(Base):
 
     word_id = Column(Integer, ForeignKey("words.id"))
     correct = Column(Boolean, default=False)
+
+
+class WordSubmission(Base):
+    __tablename__ = "word_submissions"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    word = Column(String, index=True)
+    definition = Column(Text)
+    example = Column(Text, nullable=True)
+
+    user_id = Column(String, index=True)
+
+    status = Column(String, default="pending")  # pending / approved / rejected
+
+    created_at = Column(DateTime, default=datetime.utcnow)

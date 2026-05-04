@@ -146,3 +146,40 @@ def reset_test_data(db: Session):
     db.commit()
 
     return len(data)
+
+
+def create_word_submission(db: Session, word: schemas.WordCreate, user_id: str):
+    # 1. Avoid duplicated
+    existing_word = db.query(models.Word).filter(models.Word.word == word.word).first()
+
+    if existing_word:
+        return None
+
+    # 2. create submission (moderation queue)
+    submission = models.WordSubmission(
+        word=word.word,
+        definition=word.definition,
+        example=word.example,
+        user_id=user_id,
+        status="pending",
+    )
+
+    db.add(submission)
+    db.commit()
+    db.refresh(submission)
+
+    return submission
+
+
+# TODO:
+def approve_submission(db, submission_id):
+    sub = db.query(models.WordSubmission).get(submission_id)
+
+    new_word = models.Word(
+        word=sub.word, definition=sub.definition, example=sub.example, status="approved"
+    )
+
+    db.add(new_word)
+    sub.status = "approved"
+
+    db.commit()
