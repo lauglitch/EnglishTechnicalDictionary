@@ -3,7 +3,7 @@ from fastapi import HTTPException
 
 def verify_admin(user: dict):
     """
-    Checks if user has admin role in Supabase JWT (app_metadata).
+    Validates Supabase admin role from JWT.
     """
 
     if not user:
@@ -16,7 +16,4 @@ def verify_admin(user: dict):
 
 
 def is_admin(user: dict) -> bool:
-    """
-    Optional helper if you want boolean checks.
-    """
     return user.get("app_metadata", {}).get("role") == "admin"

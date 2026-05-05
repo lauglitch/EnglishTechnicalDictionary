@@ -6,13 +6,14 @@ from fastapi.encoders import jsonable_encoder
 from app import schemas, crud, models
 from app.database import SessionLocal
 from app.auth.dependencies import get_current_user
+from app.auth.permissions import verify_admin
 
 router = APIRouter(prefix="/words", tags=["words"])
 
 
-# -------------------------
-# DB SESSION
-# -------------------------
+# =========================
+# DB
+# =========================
 def get_db():
     db = SessionLocal()
     try:
@@ -21,73 +22,75 @@ def get_db():
         db.close()
 
 
-# -------------------------
-# ADMIN CHECK
-# -------------------------
-def verify_admin(user: dict):
-    role = user.get("app_metadata", {}).get("role") or user.get(
-        "user_metadata", {}
-    ).get("role")
-
-    if role != "admin":
-        raise HTTPException(status_code=403, detail="Not admin")
-
-
-# =========================================================
-# PUBLIC WORDS (only approved)
-# =========================================================
+# =========================
+# PUBLIC (approved only)
+# =========================
 @router.get("/")
-def get_all_words(
-    skip: int = 0,
-    limit: int = 10,
-    db: Session = Depends(get_db),
-):
-    query = db.query(models.Word).filter(models.Word.status == "approved")
+def get_all_words(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
 
-    query = query.order_by(func.lower(models.Word.word).asc(), models.Word.id.asc())
+    query = (
+        db.query(models.Word)
+        .filter(models.Word.status == "approved")
+        .order_by(func.lower(models.Word.word), models.Word.id)
+    )
 
-    total = query.count()
     items = query.offset(skip).limit(limit).all()
 
-    return {"items": jsonable_encoder(items), "total": total}
+    return {
+        "items": jsonable_encoder(items),
+        "total": query.count(),
+    }
 
 
-# =========================================================
-# LETTER FILTER
-# =========================================================
 @router.get("/letter/{letter}")
-def get_words_by_letter(
-    letter: str,
-    skip: int = 0,
-    limit: int = 10,
-    db: Session = Depends(get_db),
-):
+def get_words_by_letter(letter: str, db: Session = Depends(get_db)):
+
     if len(letter) != 1:
         raise HTTPException(status_code=400, detail="Only one letter allowed")
 
-    query = db.query(models.Word).filter(
-        models.Word.status == "approved",
-        func.lower(models.Word.word).startswith(letter.lower()),
+    query = (
+        db.query(models.Word)
+        .filter(
+            models.Word.status == "approved",
+            func.lower(models.Word.word).startswith(letter.lower()),
+        )
+        .order_by(func.lower(models.Word.word), models.Word.id)
     )
 
-    query = query.order_by(func.lower(models.Word.word).asc(), models.Word.id.asc())
-
-    total = query.count()
-    items = query.offset(skip).limit(limit).all()
-
-    return {"items": jsonable_encoder(items), "total": total}
+    return {
+        "items": jsonable_encoder(query.all()),
+        "total": query.count(),
+    }
 
 
-# =========================================================
-# SUBMIT WORD (USER → PENDING QUEUE)
-# =========================================================
+@router.get("/{word_str}")
+def get_word(word_str: str, db: Session = Depends(get_db)):
+
+    word = (
+        db.query(models.Word)
+        .filter(
+            func.lower(models.Word.word) == word_str.lower(),
+            models.Word.status == "approved",
+        )
+        .first()
+    )
+
+    if not word:
+        raise HTTPException(status_code=404, detail="Word not found")
+
+    return word
+
+
+# =========================
+# USER (submit only)
+# =========================
 @router.post("/submit")
 def submit_word(
     word: schemas.WordCreate,
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    # NO insert into Word table directly
+
     submission = crud.create_word_submission(
         db,
         word,
@@ -103,9 +106,9 @@ def submit_word(
     }
 
 
-# =========================================================
-# ADMIN: GET ALL WORDS (including: approved, pending and rejected )
-# =========================================================
+# =========================
+# ADMIN LIST
+# =========================
 @router.get("/admin")
 def get_admin_words(
     skip: int = 0,
@@ -114,6 +117,7 @@ def get_admin_words(
     user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+
     verify_admin(user)
 
     query = db.query(models.Word)
@@ -121,41 +125,40 @@ def get_admin_words(
     if status != "all":
         query = query.filter(models.Word.status == status)
 
-    query = query.order_by(func.lower(models.Word.word).asc(), models.Word.id.asc())
-
-    total = query.count()
-    items = query.offset(skip).limit(limit).all()
+    query = query.order_by(func.lower(models.Word.word), models.Word.id)
 
     return {
-        "items": jsonable_encoder(items),
-        "total": total,
+        "items": jsonable_encoder(query.offset(skip).limit(limit).all()),
+        "total": query.count(),
     }
 
 
-# =========================================================
-# ADMIN: CREATE FINAL WORD (optional manual override)
-# =========================================================
+# =========================
+# ADMIN CREATE
+# =========================
 @router.post("/")
 def create_word(
     word: schemas.WordCreate,
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
+
     verify_admin(user)
 
     return crud.create_word(db, word, user_id=user.get("sub"))
 
 
-# =========================================================
-# ADMIN: UPDATE WORD
-# =========================================================
-@router.patch("/{word_str}")
+# =========================
+# ADMIN UPDATE
+# =========================
+@router.patch("/admin/{word_str}")
 def patch_word(
     word_str: str,
     word_data: schemas.WordUpdate,
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
+
     verify_admin(user)
 
     updated = crud.update_word_fields(
@@ -170,15 +173,16 @@ def patch_word(
     return updated
 
 
-# =========================================================
-# ADMIN: DELETE WORD
-# =========================================================
-@router.delete("/{word_str}")
+# =========================
+# ADMIN DELETE
+# =========================
+@router.delete("/admin/{word_str}")
 def delete_word(
     word_str: str,
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
+
     verify_admin(user)
 
     deleted = crud.delete_word_by_name(db, word_str)
@@ -189,9 +193,9 @@ def delete_word(
     return {"deleted": True}
 
 
-# =========================================================
-# ADMIN: STATUS UPDATE (APPROVE / REJECT)
-# =========================================================
+# =========================
+# ADMIN STATUS UPDATE
+# =========================
 @router.patch("/admin/{word_id}/status")
 def update_status(
     word_id: int,
@@ -199,6 +203,7 @@ def update_status(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
+
     verify_admin(user)
 
     word = db.get(models.Word, word_id)
@@ -212,24 +217,12 @@ def update_status(
     return word
 
 
-# =========================================================
-# GET SINGLE WORD (ONLY APPROVED)
-# =========================================================
-@router.get("/{word_str}")
-def get_word(word_str: str, db: Session = Depends(get_db)):
-    word = crud.get_word_by_name(db, word_str)
-
-    if not word or word.status != "approved":
-        raise HTTPException(status_code=404, detail="Word not found")
-
-    return word
-
-
-# =========================================================
-# ADMIN DEBUG (optional)
-# =========================================================
+# =========================
+# ADMIN DEBUG
+# =========================
 @router.get("/admin/debug")
 def admin_debug(user=Depends(get_current_user)):
+
     verify_admin(user)
 
     return {
