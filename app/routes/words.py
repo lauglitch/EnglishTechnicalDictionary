@@ -22,9 +22,9 @@ def get_db():
         db.close()
 
 
-# =========================
+# =========================================================
 # PUBLIC (approved only)
-# =========================
+# =========================================================
 @router.get("/")
 def get_all_words(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
 
@@ -34,11 +34,12 @@ def get_all_words(skip: int = 0, limit: int = 10, db: Session = Depends(get_db))
         .order_by(func.lower(models.Word.word), models.Word.id)
     )
 
+    total = query.count()
     items = query.offset(skip).limit(limit).all()
 
     return {
         "items": jsonable_encoder(items),
-        "total": query.count(),
+        "total": total,
     }
 
 
@@ -57,12 +58,17 @@ def get_words_by_letter(letter: str, db: Session = Depends(get_db)):
         .order_by(func.lower(models.Word.word), models.Word.id)
     )
 
+    items = query.all()
+
     return {
-        "items": jsonable_encoder(query.all()),
-        "total": query.count(),
+        "items": jsonable_encoder(items),
+        "total": len(items),
     }
 
 
+# =========================================================
+# GET SINGLE WORD (PUBLIC)
+# =========================================================
 @router.get("/{word_str}")
 def get_word(word_str: str, db: Session = Depends(get_db)):
 
@@ -81,9 +87,9 @@ def get_word(word_str: str, db: Session = Depends(get_db)):
     return word
 
 
-# =========================
-# USER (submit only)
-# =========================
+# =========================================================
+# USER SUBMIT
+# =========================================================
 @router.post("/submit")
 def submit_word(
     word: schemas.WordCreate,
@@ -100,16 +106,15 @@ def submit_word(
     if not submission:
         raise HTTPException(status_code=400, detail="Word already exists")
 
-    return {
-        "message": "Submitted for review",
-        "status": "pending",
-    }
+    return {"message": "Submitted for review", "status": "pending"}
 
 
-# =========================
-# ADMIN LIST
-# =========================
-@router.get("/admin")
+# =========================================================
+# ADMIN (ALL under /admin/* → NO COLLISIONS)
+# =========================================================
+
+
+@router.get("/admin/list")
 def get_admin_words(
     skip: int = 0,
     limit: int = 10,
@@ -127,16 +132,15 @@ def get_admin_words(
 
     query = query.order_by(func.lower(models.Word.word), models.Word.id)
 
+    items = query.offset(skip).limit(limit).all()
+
     return {
-        "items": jsonable_encoder(query.offset(skip).limit(limit).all()),
+        "items": jsonable_encoder(items),
         "total": query.count(),
     }
 
 
-# =========================
-# ADMIN CREATE
-# =========================
-@router.post("/")
+@router.post("/admin")
 def create_word(
     word: schemas.WordCreate,
     db: Session = Depends(get_db),
@@ -148,9 +152,6 @@ def create_word(
     return crud.create_word(db, word, user_id=user.get("sub"))
 
 
-# =========================
-# ADMIN UPDATE
-# =========================
 @router.patch("/admin/{word_str}")
 def patch_word(
     word_str: str,
@@ -173,9 +174,6 @@ def patch_word(
     return updated
 
 
-# =========================
-# ADMIN DELETE
-# =========================
 @router.delete("/admin/{word_str}")
 def delete_word(
     word_str: str,
@@ -193,10 +191,7 @@ def delete_word(
     return {"deleted": True}
 
 
-# =========================
-# ADMIN STATUS UPDATE
-# =========================
-@router.patch("/admin/{word_id}/status")
+@router.patch("/admin/status/{word_id}")
 def update_status(
     word_id: int,
     status: str,
@@ -217,9 +212,6 @@ def update_status(
     return word
 
 
-# =========================
-# ADMIN DEBUG
-# =========================
 @router.get("/admin/debug")
 def admin_debug(user=Depends(get_current_user)):
 
