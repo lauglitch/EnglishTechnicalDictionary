@@ -24,7 +24,15 @@ function BookItem({ word, darkMode }) {
 
       <p>{word.definition}</p>
 
-      <button onClick={() => setOpen(!open)} style={{ marginTop: 8 }}>
+      <button onClick={() => setOpen(!open)} style={{
+                marginTop: 10,
+                background: darkMode ? "#333" : "#f3f3f3",
+                color: darkMode ? "#fff" : "#111",
+                border: darkMode ? "1px solid #555" : "1px solid #ddd",
+                padding: "6px 10px",
+                borderRadius: 6,
+                cursor: "pointer",
+              }}>
         {open ? "Hide" : "More"}
       </button>
 
@@ -45,6 +53,7 @@ function App() {
   const [words, setWords] = useState([]);
   const [currentWord, setCurrentWord] = useState(null);
   const [search, setSearch] = useState("");
+  const [notFound, setNotFound] = useState(false);
 
   const [revealed, setRevealed] = useState(false);
   const [mode, setMode] = useState("card");
@@ -92,6 +101,7 @@ function App() {
     localStorage.removeItem("access_token");
     setSession(null);
     setShowAdmin(false);
+    setNotFound(false);
   };
   
 
@@ -122,6 +132,7 @@ function App() {
     };
   }, []);
 
+  
   /* ---------------- STYLE ---------------- */
   useEffect(() => {
     document.body.style.backgroundColor = darkMode ? "#111" : "#fff";
@@ -140,8 +151,11 @@ function App() {
       setMode("card");
       setRevealed(false);
 
+      setNotFound(false);
     } catch {
-      alert("Word not found");
+      setCurrentWord(null);
+      setHasSearched(true);
+      setNotFound(true);
     }
   };
 
@@ -189,6 +203,7 @@ function App() {
     setMode("book");
     setWords([]); // prevents A flash
     loadPage(0);
+    setNotFound(false);
 
     if (mode === "card") {
       await loadPage(0);
@@ -208,7 +223,7 @@ function App() {
 
   
   /* ---------------- UI ---------------- */
-  return (
+ return (
   <div>
     {showAdmin ? (
       !session ? (
@@ -233,18 +248,22 @@ function App() {
               boxSizing: "border-box",
             }}
           >
-            <h2>Admin Login</h2>
+            <h2 style={{ color: darkMode ? "#fff" : "#111" }}>
+              Admin Login
+            </h2>
 
-            {/* BACK BUTTON (prevents login dead-end) */}
             <button
-              onClick={() => setShowAdmin(false)}
+              onClick={() => {
+                setShowAdmin(true);
+                setNotFound(false);
+              }}
               style={{
                 width: "100%",
                 marginBottom: 10,
                 padding: 8,
-                background: "#444",
-                color: "#fff",
-                border: "none",
+                background: darkMode ? "#333" : "#eaeaea",
+                color: darkMode ? "#fff" : "#111",
+                border: darkMode ? "1px solid #555" : "1px solid #ddd",
                 borderRadius: 6,
                 cursor: "pointer",
               }}
@@ -260,7 +279,10 @@ function App() {
                 width: "100%",
                 marginBottom: 10,
                 padding: 8,
-                boxSizing: "border-box",
+                background: darkMode ? "#222" : "#fff",
+                color: darkMode ? "#fff" : "#111",
+                border: darkMode ? "1px solid #444" : "1px solid #ccc",
+                borderRadius: 6,
               }}
             />
 
@@ -273,11 +295,25 @@ function App() {
                 width: "100%",
                 marginBottom: 10,
                 padding: 8,
-                boxSizing: "border-box",
+                background: darkMode ? "#222" : "#fff",
+                color: darkMode ? "#fff" : "#111",
+                border: darkMode ? "1px solid #444" : "1px solid #ccc",
+                borderRadius: 6,
               }}
             />
 
-            <button onClick={handleLogin} style={{ width: "100%" }}>
+            <button
+              onClick={handleLogin}
+              style={{
+                width: "100%",
+                padding: 8,
+                background: darkMode ? "#333" : "#f3f3f3",
+                color: darkMode ? "#fff" : "#111",
+                border: darkMode ? "1px solid #555" : "1px solid #ddd",
+                borderRadius: 6,
+                cursor: "pointer",
+              }}
+            >
               Login
             </button>
 
@@ -285,14 +321,17 @@ function App() {
           </div>
         </div>
       ) : (
-        <>
-          <AdminDashboard
-            onBack={() => setShowAdmin(false)}
-            onLogout={handleLogout}
-            darkMode={darkMode}
-          />
-
-        </>
+        <AdminDashboard
+          onBack={() => {
+            setShowAdmin(false);
+            setSearch("");
+            setCurrentWord(null);
+            setHasSearched(false);
+            setRevealed(false);
+          }}
+          onLogout={handleLogout}
+          darkMode={darkMode}
+        />
       )
     ) : (
       <div
@@ -304,32 +343,16 @@ function App() {
           justifyContent: "center",
           padding: 16,
           fontFamily: "Arial",
-          boxSizing: "border-box",
         }}
       >
         <div style={{ width: "100%", maxWidth: 900 }}>
 
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 10,
-              textAlign: "center",
-            }}
-          >
-            <h1
-              style={{
-                color: darkMode ? "#fff" : "#111",
-                margin: 0,
-                fontSize: "clamp(20px, 5vw, 32px)",
-              }}
-            >
-              📘 Technical Dictionary
-            </h1>
-          </div>
+          {/* TITLE */}
+          <h1 style={{ color: darkMode ? "#fff" : "#3a3a3a" }}>
+            📘 Technical Dictionary
+          </h1>
 
+          {/* TOP BUTTONS */}
           <div
             style={{
               display: "flex",
@@ -347,30 +370,93 @@ function App() {
                 flex: "1 1 160px",
                 minWidth: 140,
                 padding: 8,
+                background: darkMode ? "#222" : "#fff",
+                color: darkMode ? "#fff" : "#111",
+                border: darkMode ? "1px solid #444" : "1px solid #ccc",
+                borderRadius: 6,
               }}
             />
 
-            <button onClick={handleSearch}>Search</button>
+            <button
+              onClick={handleSearch}
+              style={{
+                background: darkMode ? "#333" : "#f3f3f3",
+                color: darkMode ? "#fff" : "#111",
+                border: darkMode ? "1px solid #555" : "1px solid #ddd",
+                padding: "6px 10px",
+                borderRadius: 6,
+                cursor: "pointer",
+              }}
+            >
+              Search
+            </button>
 
-            <button onClick={toggleMode}>
+            <button
+              onClick={toggleMode}
+              style={{
+                background: darkMode ? "#333" : "#f3f3f3",
+                color: darkMode ? "#fff" : "#111",
+                border: darkMode ? "1px solid #555" : "1px solid #ddd",
+                padding: "6px 10px",
+                borderRadius: 6,
+                cursor: "pointer",
+              }}
+            >
               {mode === "card" ? "📖 Book" : "🃏 Card"}
             </button>
 
-            <button onClick={() => setDarkMode(!darkMode)}>
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              style={{
+                background: darkMode ? "#333" : "#f3f3f3",
+                color: darkMode ? "#fff" : "#111",
+                border: darkMode ? "1px solid #555" : "1px solid #ddd",
+                padding: "6px 10px",
+                borderRadius: 6,
+                cursor: "pointer",
+              }}
+            >
               {darkMode ? "☀️" : "🌙"}
             </button>
 
-            <button onClick={() => { console.log(studyMode); setStudyMode(!studyMode); setRevealed(false); }}>
+            <button
+              onClick={() => {
+                setStudyMode(!studyMode);
+                setRevealed(false);
+              }}
+              style={{
+                background: darkMode ? "#333" : "#f3f3f3",
+                color: darkMode ? "#fff" : "#111",
+                border: darkMode ? "1px solid #555" : "1px solid #ddd",
+                padding: "6px 10px",
+                borderRadius: 6,
+                cursor: "pointer",
+              }}
+            >
               {studyMode ? "👓" : "👁️"}
             </button>
 
-            <button onClick={() => setShowAdmin(true)}>
+            <button
+              onClick={() => {
+                setShowAdmin(true);
+                setNotFound(false);
+              }}
+              style={{
+                background: darkMode ? "#333" : "#f3f3f3",
+                color: darkMode ? "#fff" : "#111",
+                border: darkMode ? "1px solid #555" : "1px solid #ddd",
+                padding: "6px 10px",
+                borderRadius: 6,
+                cursor: "pointer",
+              }}
+            >
               🛠 Admin
             </button>
           </div>
 
+          {/* BOOK MODE */}
           {mode === "book" ? (
-            <div style={{ width: "100%" }}>
+            <div>
               <div
                 style={{
                   display: "flex",
@@ -387,26 +473,24 @@ function App() {
                       width: 40,
                       height: 40,
                       borderRadius: "50%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      padding: 0,
-                      lineHeight: 1,
-                      WebkitAppearance: "none",
-                      appearance: "none",
+                      background: darkMode ? "#333" : "#f3f3f3",
+                      color: darkMode ? "#fff" : "#111",
+                      border: darkMode ? "1px solid #555" : "1px solid #ddd",
                     }}
                   >
                     {l}
                   </button>
                 ))}
+
                 <button
                   onClick={handleAllClick}
                   style={{
                     width: 60,
                     height: 40,
                     borderRadius: 20,
-                    WebkitAppearance: "none",
-                    appearance: "none",
+                    background: darkMode ? "#333" : "#f3f3f3",
+                    color: darkMode ? "#fff" : "#111",
+                    border: darkMode ? "1px solid #555" : "1px solid #ddd",
                   }}
                 >
                   All
@@ -419,15 +503,8 @@ function App() {
                 ))}
               </div>
 
-              <div
-                style={{
-                  marginTop: 20,
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 10,
-                  justifyContent: "center",
-                }}
-              >
+              {/* PAGINATION */}
+              <div style={{ marginTop: 20, textAlign: "center" }}>
                 <button
                   disabled={page === 0}
                   onClick={() => {
@@ -436,11 +513,18 @@ function App() {
                       ? loadLetterPage(activeLetter, newPage)
                       : loadPage(newPage);
                   }}
+                  style={{
+                    background: darkMode ? "#333" : "#f3f3f3",
+                    color: darkMode ? "#fff" : "#111",
+                    border: darkMode ? "1px solid #555" : "1px solid #ddd",
+                    padding: "6px 10px",
+                    borderRadius: 6,
+                  }}
                 >
                   Prev
                 </button>
 
-                <span>
+                <span style={{ margin: "0 10px" }}>
                   Page {page + 1} / {Math.ceil(total / PAGE_SIZE)}
                 </span>
 
@@ -452,12 +536,20 @@ function App() {
                       ? loadLetterPage(activeLetter, newPage)
                       : loadPage(newPage);
                   }}
+                  style={{
+                    background: darkMode ? "#333" : "#f3f3f3",
+                    color: darkMode ? "#fff" : "#111",
+                    border: darkMode ? "1px solid #555" : "1px solid #ddd",
+                    padding: "6px 10px",
+                    borderRadius: 6,
+                  }}
                 >
                   Next
                 </button>
               </div>
             </div>
           ) : (
+            /* CARD VIEW */
             <div
               style={{
                 borderBottom: "1px solid #444",
@@ -465,62 +557,53 @@ function App() {
                 background: darkMode ? "#1a1a1a" : "#f7f7f7",
                 borderRadius: 10,
                 marginTop: 10,
-                wordBreak: "break-word",
               }}
             >
-              {!hasSearched || !currentWord ? (
+              {notFound ? (
+                <p style={{ color: "red" }}>Word not found</p>
+              ) : !hasSearched || !currentWord ? (
                 <p>📘 Search a word</p>
               ) : (
                 <>
                   <h3>{currentWord.word}</h3>
 
                   {studyMode ? (
-                    <>
-                      {!revealed ? (
-                        <p
-                          onClick={() => setRevealed(true)}
-                          style={{ cursor: "pointer" }}
-                        >
-                          Click to reveal
-                        </p>
-                      ) : (
-                        <>
-                          <p
-                            onClick={() => setRevealed(false)}
-                            style={{ cursor: "pointer" }}
-                          >
-                            Click to hide
-                          </p>
-
-                          <p style={{ padding: 12 }}>{currentWord.definition}</p>
-
-                          <p><b>Example:</b> {currentWord.example}</p>
-                          <p><b>Grammar:</b> {currentWord.grammar_class}</p>
-                          <p><b>Topic:</b> {currentWord.topic}</p>
-                          <p><b>Author:</b> {currentWord.author}</p>
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      {/* studyMode OFF → ALWAYS show content */}
+                  !revealed ? (
+                    <p
+                      onClick={() => setRevealed(true)}
+                      style={{ cursor: "pointer", color: darkMode ? "#6ba0dc" : "#004cc6", marginBottom: 10}}
+                    >
+                      Click to reveal
+                    </p>
+                    ) : (
                       <>
-                        <>
-                          <p style={{ padding: 12 }}>{currentWord.definition}</p>
+                        <p
+                          onClick={() => setRevealed(false)}
+                          style={{ cursor: "pointer", color: darkMode ? "#6ba0dc" : "#004cc6", marginBottom: 10}}
+                        >
+                          Click to hide
+                        </p>
 
-                          <p><b>Example:</b> {currentWord.example}</p>
-                          <p><b>Grammar:</b> {currentWord.grammar_class}</p>
-                          <p><b>Topic:</b> {currentWord.topic}</p>
-                          <p><b>Author:</b> {currentWord.author}</p>
-                        </>
+                        <p style={{marginBottom: 10}}>{currentWord.definition}</p>
+                        <p><b>Example:</b> {currentWord.example}</p>
+                        <p><b>Grammar:</b> {currentWord.grammar_class}</p>
+                        <p><b>Topic:</b> {currentWord.topic}</p>
+                        <p><b>Author:</b> {currentWord.author}</p>
                       </>
-                    </>
+                    )
+                  ) : (
+                    <div >
+                      <p style={{marginBottom: 10}}>{currentWord.definition}</p>
+                      <p><b>Example:</b> {currentWord.example}</p>
+                      <p><b>Grammar:</b> {currentWord.grammar_class}</p>
+                      <p><b>Topic:</b> {currentWord.topic}</p>
+                      <p><b>Author:</b> {currentWord.author}</p>
+                    </div>
                   )}
                 </>
               )}
             </div>
           )}
-
         </div>
       </div>
     )}

@@ -11,14 +11,10 @@ function Login({ onSuccess }) {
     setLoading(true);
     setError(null);
 
-    // console.log("Trying login with:", email);
-
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-
-    // console.log("Supabase response:", { data, error });
 
     setLoading(false);
 
@@ -34,8 +30,6 @@ function Login({ onSuccess }) {
     }
 
     const token = localStorage.getItem("access_token");
-
-    //console.log("Login - JWT TOKEN:", token);
 
     localStorage.setItem("access_token", token);
     localStorage.setItem("login_time", Date.now());

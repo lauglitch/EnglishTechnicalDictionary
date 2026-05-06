@@ -32,9 +32,6 @@ app.add_middleware(
 
 @app.middleware("http")
 async def debug_middleware(request, call_next):
-    # print("REQUEST PATH:", request.url.path)
-    # print("HEADERS:", dict(request.headers))
-
     response = await call_next(request)
 
     response.headers["X-Debug"] = "CORS_OK"
@@ -46,8 +43,6 @@ app.include_router(words.router)
 app.include_router(users.router)
 
 SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
-
-# print("SECRET LOADED:", SUPABASE_JWT_SECRET is not None)
 
 
 @app.get("/test")

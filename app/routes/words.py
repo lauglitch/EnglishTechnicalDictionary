@@ -44,7 +44,12 @@ def get_all_words(skip: int = 0, limit: int = 10, db: Session = Depends(get_db))
 
 
 @router.get("/letter/{letter}")
-def get_words_by_letter(letter: str, db: Session = Depends(get_db)):
+def get_words_by_letter(
+    letter: str,
+    skip: int = 0,
+    limit: int = 3,
+    db: Session = Depends(get_db),
+):
 
     if len(letter) != 1:
         raise HTTPException(status_code=400, detail="Only one letter allowed")
@@ -58,33 +63,14 @@ def get_words_by_letter(letter: str, db: Session = Depends(get_db)):
         .order_by(func.lower(models.Word.word), models.Word.id)
     )
 
-    items = query.all()
+    total = query.count()
+
+    items = query.offset(skip).limit(limit).all()
 
     return {
         "items": jsonable_encoder(items),
-        "total": len(items),
+        "total": total,
     }
-
-
-# =========================================================
-# GET SINGLE WORD (PUBLIC)
-# =========================================================
-@router.get("/{word_str}")
-def get_word(word_str: str, db: Session = Depends(get_db)):
-
-    word = (
-        db.query(models.Word)
-        .filter(
-            func.lower(models.Word.word) == word_str.lower(),
-            models.Word.status == "approved",
-        )
-        .first()
-    )
-
-    if not word:
-        raise HTTPException(status_code=404, detail="Word not found")
-
-    return word
 
 
 # =========================================================
@@ -112,8 +98,6 @@ def submit_word(
 # =========================================================
 # ADMIN (ALL under /admin/* → NO COLLISIONS)
 # =========================================================
-
-
 @router.get("/admin/list")
 def get_admin_words(
     skip: int = 0,
@@ -221,3 +205,24 @@ def admin_debug(user=Depends(get_current_user)):
         "email": user.get("email"),
         "role": user.get("app_metadata", {}).get("role"),
     }
+
+
+# =========================================================
+# GET SINGLE WORD (PUBLIC)
+# =========================================================
+@router.get("/{word_str}")
+def get_word(word_str: str, db: Session = Depends(get_db)):
+
+    word = (
+        db.query(models.Word)
+        .filter(
+            func.lower(models.Word.word) == word_str.lower(),
+            models.Word.status == "approved",
+        )
+        .first()
+    )
+
+    if not word:
+        raise HTTPException(status_code=404, detail="Word not found")
+
+    return word

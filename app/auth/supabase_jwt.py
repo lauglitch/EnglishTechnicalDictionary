@@ -101,9 +101,6 @@ def verify_supabase_jwt(token: str) -> SupabaseUser:
             issuer=f"{SUPABASE_PROJECT_URL}/auth/v1",
         )
 
-        # print("JWT HEADER:", headers)
-        # print("JWT PAYLOAD:", payload)
-
         return {
             "sub": payload.get("sub"),
             "email": payload.get("email"),
