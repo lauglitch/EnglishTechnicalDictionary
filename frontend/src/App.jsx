@@ -3,6 +3,8 @@ import api from "./api/api";
 import { supabase } from "./lib/supabase";
 
 import AdminDashboard from "./pages/AdminDashboard";
+import UserDashboard from "./pages/UserDashboard";
+
 
 const PAGE_SIZE = 3;
 
@@ -66,6 +68,11 @@ function App() {
   const [activeLetter, setActiveLetter] = useState(null);
   const [total, setTotal] = useState(0);
 
+  const isAdminUser = (session) => {
+    return session?.user?.user_metadata?.role === "admin"
+      || session?.user?.app_metadata?.role === "admin";
+  };
+
   const [showAdmin, setShowAdmin] = useState(false);
 
   const [session, setSession] = useState(null);
@@ -90,13 +97,16 @@ function App() {
       return;
     }
 
-    if (!data?.session) return;
+    const session = data?.session;
+    if (!session) return;
 
-    setSession(data.session);
+    setSession(session);
+
+    setShowAdmin(false);
   };
 
   /* ---------------- LOGOUT  ---------------- */
- const handleLogout = async () => {
+  const handleLogout = async () => {
     await supabase.auth.signOut();
     localStorage.removeItem("access_token");
     setSession(null);
@@ -121,6 +131,7 @@ function App() {
           // Prevents auto-return after logout
           if (!session) {
             setShowAdmin(false);
+            setSession(null);
           }
         }
       }
@@ -246,20 +257,23 @@ function App() {
               borderRadius: 10,
               background: darkMode ? "#1a1a1a" : "#f5f5f5",
               boxSizing: "border-box",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
             }}
           >
             <h2 style={{ color: darkMode ? "#fff" : "#111" }}>
-              Admin Login
+              Login
             </h2>
 
             <button
               onClick={() => {
-                setShowAdmin(true);
+                setShowAdmin(false);
                 setNotFound(false);
               }}
               style={{
-                width: "100%",
-                marginBottom: 10,
+                width: "30%",
+                marginBottom: 12,
                 padding: 8,
                 background: darkMode ? "#333" : "#eaeaea",
                 color: darkMode ? "#fff" : "#111",
@@ -283,6 +297,7 @@ function App() {
                 color: darkMode ? "#fff" : "#111",
                 border: darkMode ? "1px solid #444" : "1px solid #ccc",
                 borderRadius: 6,
+                boxSizing: "border-box",
               }}
             />
 
@@ -299,29 +314,47 @@ function App() {
                 color: darkMode ? "#fff" : "#111",
                 border: darkMode ? "1px solid #444" : "1px solid #ccc",
                 borderRadius: 6,
+                boxSizing: "border-box",
               }}
             />
 
             <button
               onClick={handleLogin}
               style={{
-                width: "100%",
+                width: "30%",
                 padding: 8,
                 background: darkMode ? "#333" : "#f3f3f3",
                 color: darkMode ? "#fff" : "#111",
                 border: darkMode ? "1px solid #555" : "1px solid #ddd",
                 borderRadius: 6,
                 cursor: "pointer",
+                marginTop: 6,
               }}
             >
               Login
             </button>
 
-            {authError && <p style={{ color: "red" }}>{authError}</p>}
+            {authError && (
+              <p style={{ color: "red", width: "100%", textAlign: "center" }}>
+                {authError}
+              </p>
+            )}
           </div>
         </div>
-      ) : (
+      ) : isAdminUser(session) ? (
         <AdminDashboard
+          onBack={() => {
+            setShowAdmin(false);
+            setSearch("");
+            setCurrentWord(null);
+            setHasSearched(false);
+            setRevealed(false);
+          }}
+          onLogout={handleLogout}
+          darkMode={darkMode}
+        />
+      ) : (
+        <UserDashboard
           onBack={() => {
             setShowAdmin(false);
             setSearch("");
@@ -334,6 +367,7 @@ function App() {
         />
       )
     ) : (
+      // NO ADMIN
       <div
         style={{
           minHeight: "100vh",
@@ -345,6 +379,7 @@ function App() {
           fontFamily: "Arial",
         }}
       >
+        
         <div style={{ width: "100%", maxWidth: 900 }}>
 
           {/* TITLE */}
@@ -450,7 +485,7 @@ function App() {
                 cursor: "pointer",
               }}
             >
-              🛠 Admin
+              Login
             </button>
           </div>
 

@@ -29,7 +29,7 @@ function Login({ onSuccess }) {
       return;
     }
 
-    const token = localStorage.getItem("access_token");
+    const token = data.session.access_token;
 
     localStorage.setItem("access_token", token);
     localStorage.setItem("login_time", Date.now());
